@@ -11,9 +11,4 @@
 		
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 	</PropertyGroup>
-
-	<PropertyGroup>
-		<Authors>Richard Fuller</Authors>
-		<Copyright>Richard Fuller (c) 2022</Copyright>
-	</PropertyGroup>
 </Project>
