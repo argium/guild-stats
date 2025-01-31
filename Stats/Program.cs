@@ -8,13 +8,12 @@ using GraphQL;
 using GraphQL.Client.Serializer.SystemTextJson;
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-IHostEnvironment env = builder.Environment;
 
 string token = string.Empty;
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{env.EnvironmentName}.json", true, true);
+	.AddEnvironmentVariables();
 
 builder.Services
 	.AddLogging(c => c.AddConsole())
