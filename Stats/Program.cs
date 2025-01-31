@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -102,20 +102,9 @@ var reportsData = new GraphQLRequest {
 };
 
 
-// var graphQLResponse = await graphQLClient.SendQueryAsync<dynamic>(heroRequest);
 var graphQLResponse = await graphQLClient.SendQueryAsync<dynamic>(reportsData);
 
 log.LogInformation($"GraphQL Response: {graphQLResponse}");
-
-// var client = app.Services.GetRequiredService<WarcraftLogsPublicClient>();
-// var guild = await client
-// 	.Query
-// 	.GuildData()
-// 	.Select(x => x)
-// 	.ExecuteAsync();
-
-// log.LogInformation($"Guild: {guild}");
-
 
 public class LoggingHandler : DelegatingHandler
 {
