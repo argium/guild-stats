@@ -68,31 +68,7 @@ var heroRequest = new GraphQLRequest {
 };
 
 var reportsData = new GraphQLRequest {
-    Query = """
-		query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!) {
-			rateLimitData {
-				limitPerHour
-				pointsSpentThisHour
-				pointsResetIn
-			}
-			guildData {
-				guild(name: $guildName, serverSlug: $guildServerSlug, serverRegion: $guildServerRegion) {
-					name
-					id
-				}
-			}
-			reportData {
-				reports(guildName: $guildName, guildServerSlug: $guildServerSlug, guildServerRegion: $guildServerRegion, limit:5) {
-					data {
-						code
-						fights {
-							name
-						}
-					}
-				}
-			}
-		}
-	""",
+    Query = File.ReadAllText("reportData.graphql"),
 	Variables = new
 	{
 		guildName = "Resus",
