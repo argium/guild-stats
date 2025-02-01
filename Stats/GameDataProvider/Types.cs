@@ -51,6 +51,7 @@ public record ReportsData(
 
 public record Report(
 	string Code,
+	long StartTime,
 	long EndTime,
 	List<Fight> Fights,
 	ReportMasterData MasterData
@@ -60,6 +61,7 @@ public record Fight(
 	int ID,
 	int EncounterID,
 	string Name,
+	Difficulty Difficulty,
 	long StartTime,
 	long EndTime,
 	bool Kill,
@@ -71,7 +73,6 @@ public record Fight(
 public record ReportMasterData(
 	List<ReportActor> Actors
 );
-
 
 public record ReportActor(
 	long GameID,

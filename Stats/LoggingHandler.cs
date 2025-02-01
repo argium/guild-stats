@@ -1,30 +1,30 @@
+namespace Stats;
+
 public class LoggingHandler : DelegatingHandler
 {
-    public LoggingHandler(HttpMessageHandler innerHandler)
+	private readonly ILogger<LoggingHandler> logger;
+
+	public LoggingHandler(HttpMessageHandler innerHandler, ILogger<LoggingHandler> logger)
         : base(innerHandler)
     {
-    }
-
+		this.logger = logger;
+	}
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Console.WriteLine("Request:");
-        Console.WriteLine(request.ToString());
+        this.logger.LogTrace($"Request: \n{request.ToString()}");
         if (request.Content != null)
         {
-            Console.WriteLine(await request.Content.ReadAsStringAsync());
+            this.logger.LogTrace(await request.Content.ReadAsStringAsync());
         }
-        Console.WriteLine();
 
         HttpResponseMessage response = await base.SendAsync(request, cancellationToken);
 
-        Console.WriteLine("Response:");
-        Console.WriteLine(response.ToString());
+        this.logger.LogTrace($"Response: \n{response.ToString()}");
         if (response.Content != null)
         {
-            Console.WriteLine(await response.Content.ReadAsStringAsync());
+            this.logger.LogTrace(await response.Content.ReadAsStringAsync());
         }
-        Console.WriteLine();
 
         return response;
     }

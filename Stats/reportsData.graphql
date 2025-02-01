@@ -7,11 +7,13 @@ query ($code: String!) {
     reportData {
         report(code: $code) {
             code
+            startTime
             endTime
             fights(killType: Encounters) {
                 id
                 encounterID
                 name
+                difficulty
                 startTime
                 endTime
                 kill

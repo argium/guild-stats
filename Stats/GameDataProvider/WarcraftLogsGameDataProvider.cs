@@ -1,7 +1,6 @@
 namespace Stats.GameDataProvider;
 
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using GraphQL;
 using GraphQL.Client.Abstractions.Websocket;
 using Microsoft.Extensions.Logging;
@@ -16,25 +15,6 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		this.graphQLClient = graphQLClient;
 		this.log = log;
 	}
-
-	// public async Task<List<string>> GetReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, CancellationToken cancellationToken = default)
-	// {
-	// 	var reportsList = new GraphQLRequest
-	// 	{
-	// 		Query = File.ReadAllText("reportsList.graphql"),
-	// 		Variables = new
-	// 		{
-	// 			guildName = guildName,
-	// 			guildServerSlug = guildServerSlug,
-	// 			guildServerRegion = guildServerRegion,
-	// 			zoneID = zoneID
-	// 		}
-	// 	};
-
-	// 	var resp = await this.ExecuteAsync<ReportsListMessage>(reportsList, cancellationToken);
-	// 	this.CheckRateLimit(resp.RateLimitData);
-	// 	return resp.ReportData.Reports.Data.Select(r => r.Code).ToList();
-	// }
 
 	public async IAsyncEnumerable<Report> GetReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
@@ -81,13 +61,12 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		}
 		catch (Exception ex)
 		{
-			log.LogError(ex, "An error occurred while fetching data");
 			throw new GameDataProviderException("An error occurred while fetching data", ex);
 		}
 
 		if (response == null)
 		{
-			throw new GameDataProviderException("An error occurred while fetching data");
+			throw new GameDataProviderException("An error occurred while fetching data: null response");
 		}
 
 		if (response.Errors != null)
@@ -97,14 +76,24 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 				log.LogError(error.Message);
 			}
 
-			throw new GameDataProviderException("An error occurred while fetching data");
+			throw new GameDataProviderException("An error occurred while fetching data: GraphQL errors");
 		}
 
 		return response.Data;
 	}
 
+	public Task SaveReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, IEnumerable<Report> reports, CancellationToken cancellationToken = default)
+	{
+		throw new NotImplementedException();
+	}
+
 	private void CheckRateLimit(RateLimitData rateLimitData)
 	{
-		this.log.LogInformation("Rate limit: {LimitPerHour} points per hour, {PointsSpentThisHour} points spent this hour, {PointsResetIn} seconds until reset", rateLimitData.LimitPerHour, rateLimitData.PointsSpentThisHour, rateLimitData.PointsResetIn);
+		this.log.LogDebug("Rate limit: {LimitPerHour} points per hour, {PointsSpentThisHour} points spent this hour, {PointsResetIn} seconds until reset", rateLimitData.LimitPerHour, rateLimitData.PointsSpentThisHour, rateLimitData.PointsResetIn);
+
+		if (rateLimitData.LimitPerHour - rateLimitData.PointsSpentThisHour < 300)
+		{
+			this.log.LogWarning("Rate limit warning: less than 300 points remaining this hour");
+		}
 	}
 }
