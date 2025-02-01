@@ -8,10 +8,10 @@ public class CsvReportWriter : IReportWriter
 {
 	public async Task WriteReportAsync(string reportName, IEnumerable<ReportRow> rows)
 	{
-		// check reportname is alphanumeric only
-		if (!Regex.IsMatch(reportName, "^[a-zA-Z0-9]+$"))
+		// check reportname is alphanumeric or spaces only
+		if (!Regex.IsMatch(reportName, @"^[a-zA-Z0-9\s]*$"))
 		{
-			throw new ArgumentException("Report name must be alphanumeric only");
+			throw new ArgumentException("Report name must be alphanumeric or spaces only");
 		}
 
 		using var writer = new StreamWriter(reportName + ".csv", false);

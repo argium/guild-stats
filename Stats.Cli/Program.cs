@@ -48,8 +48,13 @@ var writer = app.Services.GetRequiredService<IReportWriter>();
 var rawReports = new List<Report>();
 var reports = new List<Report>();
 int i = 0;
+
+const string guildName = "Da Bishes";
+const string realmName = "frostmourne";
+
 // await foreach (var report in client.GetReportsAsync("Resus", "frostmourne", "us", ZoneID.NerubarPalace))
-await foreach (var report in client.GetReportsAsync("Vortex", "barthilas", "us", ZoneID.NerubarPalace))
+// await foreach (var report in client.GetReportsAsync("Vortex", "barthilas", "us", ZoneID.NerubarPalace))
+await foreach (var report in client.GetReportsAsync(guildName, realmName, "us", ZoneID.NerubarPalace))
 {
 	rawReports.Add(report);
 
@@ -80,6 +85,7 @@ foreach (var report in orderedReports)
 {
 	foreach (var fight in report.Fights)
 	{
+		// TODO: filter by game zone ID
 		if (fight.Difficulty != (int)Difficulty.Mythic || killedEncounters.Contains(fight.EncounterID))
 		{
 			continue;
@@ -91,6 +97,7 @@ foreach (var report in orderedReports)
 			rowsForEncounter[fight.EncounterID] = value;
 		}
 
+		// TODO: remove the timezone when printing
 		var row = new ReportRow(
 			DateTimeOffset.FromUnixTimeMilliseconds(report.StartTime + fight.StartTime).ToOffset(TimeSpan.FromHours(11)),
 			fight.EncounterID,
@@ -118,6 +125,6 @@ foreach (var report in orderedReports)
 	}
 }
 
-await writer.WriteReportAsync("resus", rowsForEncounter.Values.SelectMany(x => x));
+await writer.WriteReportAsync(guildName, rowsForEncounter.Values.SelectMany(x => x));
 
 log.LogInformation("Application finished");
