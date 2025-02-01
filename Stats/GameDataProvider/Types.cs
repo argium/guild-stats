@@ -61,7 +61,7 @@ public record Fight(
 	int ID,
 	int EncounterID,
 	string Name,
-	Difficulty Difficulty,
+	int Difficulty,
 	long StartTime,
 	long EndTime,
 	bool Kill,
@@ -82,3 +82,17 @@ public record ReportActor(
 	string SubType,
 	string Server
 );
+
+public enum Difficulty
+{
+	Normal = 3,
+
+	Heroic = 4,
+
+	Mythic = 5
+}
+
+public static class ZoneID
+{
+	public static readonly int NerubarPalace = 38;
+}

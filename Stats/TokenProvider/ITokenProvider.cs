@@ -2,5 +2,5 @@ namespace Stats.TokenProvider;
 
 public interface ITokenProvider
 {
-	Task<string> GetTokenAsync();
+	Task<string> GetTokenAsync(CancellationToken cancellationToken = default);
 }

@@ -32,8 +32,8 @@ builder.Services
 		return client;
 	})
 	.Configure<WarcraftLogsOptions>(builder.Configuration.GetSection("WarcraftLogs"))
-	// .AddScoped<IGameDataProvider, WarcraftLogsGameDataProvider>()
-	.AddSingleton<IGameDataProvider, FileGameDataProvider>()
+	.AddScoped<IGameDataProvider, WarcraftLogsGameDataProvider>()
+	// .AddSingleton<IGameDataProvider, FileGameDataProvider>()
 	.AddSingleton<IReportWriter, CsvReportWriter>();
 
 IHost app = builder.Build();
@@ -48,11 +48,12 @@ var writer = app.Services.GetRequiredService<IReportWriter>();
 var rawReports = new List<Report>();
 var reports = new List<Report>();
 int i = 0;
-await foreach (var report in client.GetReportsAsync("Resus", "frostmourne", "us", ZoneID.NerubarPalace))
+// await foreach (var report in client.GetReportsAsync("Resus", "frostmourne", "us", ZoneID.NerubarPalace))
+await foreach (var report in client.GetReportsAsync("Vortex", "barthilas", "us", ZoneID.NerubarPalace))
 {
 	rawReports.Add(report);
 
-	if (report.MasterData.Actors.Any(a => a.Name == "Sol\u00e4r"))
+	if (true)//report.MasterData.Actors.Any(a => a.Name == "Sol\u00e4r"))
 	{
 		reports.Add(report);
 	}
@@ -79,7 +80,7 @@ foreach (var report in orderedReports)
 {
 	foreach (var fight in report.Fights)
 	{
-		if (fight.Difficulty != Difficulty.Mythic || killedEncounters.Contains(fight.EncounterID))
+		if (fight.Difficulty != (int)Difficulty.Mythic || killedEncounters.Contains(fight.EncounterID))
 		{
 			continue;
 		}
