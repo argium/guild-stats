@@ -1,4 +1,4 @@
-query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!) {
+query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!, $zoneID: Int!) {
     rateLimitData {
         limitPerHour
         pointsSpentThisHour
@@ -11,9 +11,17 @@ query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: Strin
         }
     }
     reportData {
-        reports(guildName: $guildName, guildServerSlug: $guildServerSlug, guildServerRegion: $guildServerRegion, limit:5) {
+        reports(guildName: $guildName, guildServerSlug: $guildServerSlug, guildServerRegion: $guildServerRegion, zoneID: $zoneID) {
+            total
+            per_page
+            current_page
+            from
+            to
+            last_page
+            has_more_pages
             data {
                 code
+                endTime
                 fights {
                     name
                 }

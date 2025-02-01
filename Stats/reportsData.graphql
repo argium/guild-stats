@@ -1,0 +1,34 @@
+query ($codes: [string!]) {
+    rateLimitData {
+        limitPerHour
+        pointsSpentThisHour
+        pointsResetIn
+    }
+    reports(code: $codes) {
+        fights(killType: Encounters) {
+            id
+            encounterID
+            name
+            startTime
+            endTime
+            kill
+            fightPercentage
+            friendlyPlayers
+            averageItemLevel
+            gameZone {
+                id
+                name
+            }
+        }
+        masterData {
+            actors(type: "Player") {
+                id
+                gameID
+                name
+                server
+                type
+                subType
+            }
+        }
+    }
+}

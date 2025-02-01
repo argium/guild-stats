@@ -1,15 +1,15 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using GraphQL.Client.Http;
 using GraphQL.Client.Abstractions.Websocket;
-using GraphQL;
 using GraphQL.Client.Serializer.SystemTextJson;
+using Stats;
+using Stats.TokenProvider;
+using Stats.GameDataProvider;
 
 HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
-string token = string.Empty;
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -17,98 +17,25 @@ builder.Configuration
 
 builder.Services
 	.AddLogging(c => c.AddConsole())
+	.AddSingleton<ITokenProvider, WarcraftLogsTokenProvider>()
 	.AddScoped<IGraphQLWebsocketJsonSerializer, SystemTextJsonSerializer>()
 	.AddScoped<IGraphQLWebSocketClient, GraphQLHttpClient>(sp => {
+		var tokenProvider = sp.GetRequiredService<ITokenProvider>();
+		var token = tokenProvider.GetTokenAsync().Result;
 		var httpClient = new HttpClient(new LoggingHandler(new HttpClientHandler()));
 		httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
 		var client = new GraphQLHttpClient("https://www.warcraftlogs.com/api/v2/client", new SystemTextJsonSerializer(), httpClient);
 		return client;
-	});
+	})
+	.Configure<WarcraftLogsOptions>(builder.Configuration.GetSection("WarcraftLogs"))
+	.AddScoped<IGameDataProvider, WarcraftLogsGameDataProvider>();
 
 IHost app = builder.Build();
 
 var log = app.Services.GetRequiredService<ILogger<Program>>();
 log.LogInformation("Starting application");
 
+var client = app.Services.GetRequiredService<IGameDataProvider>();
+List<string> codes = client.GetReportsAsync("Resus", "frostmourne", "us", ZoneID.NerubarPalace).Result;
 
-var graphQLClient = app.Services.GetRequiredService<IGraphQLWebSocketClient>();
-var heroRequest = new GraphQLRequest {
-    Query = """
-		query ($name: String!, $serverSlug: String!, $serverRegion: String!) {
-			rateLimitData {
-				limitPerHour
-				pointsSpentThisHour
-				pointsResetIn
-			}
-			characterData {
-				character(name: $name, serverSlug: $serverSlug, serverRegion: $serverRegion) {
-					name
-					id
-					classID
-					recentReports(limit: 1) {
-						data {
-							fights(killType: Encounters) {
-								encounterID
-								name
-								endTime
-							}
-						}
-					}
-				}
-			}
-		}
-	""",
-	Variables = new
-	{
-		name = "Argium",
-		serverSlug = "frostmourne",
-		serverRegion = "us"
-	}
-};
-
-var reportsData = new GraphQLRequest {
-    Query = File.ReadAllText("reportData.graphql"),
-	Variables = new
-	{
-		guildName = "Resus",
-		guildServerSlug = "frostmourne",
-		guildServerRegion = "us"
-	}
-};
-
-
-var graphQLResponse = await graphQLClient.SendQueryAsync<dynamic>(reportsData);
-
-log.LogInformation($"GraphQL Response: {graphQLResponse}");
-
-public class LoggingHandler : DelegatingHandler
-{
-    public LoggingHandler(HttpMessageHandler innerHandler)
-        : base(innerHandler)
-    {
-    }
-
-
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        Console.WriteLine("Request:");
-        Console.WriteLine(request.ToString());
-        if (request.Content != null)
-        {
-            Console.WriteLine(await request.Content.ReadAsStringAsync());
-        }
-        Console.WriteLine();
-
-        HttpResponseMessage response = await base.SendAsync(request, cancellationToken);
-
-        Console.WriteLine("Response:");
-        Console.WriteLine(response.ToString());
-        if (response.Content != null)
-        {
-            Console.WriteLine(await response.Content.ReadAsStringAsync());
-        }
-        Console.WriteLine();
-
-        return response;
-    }
-}
+log.LogInformation("Codes: {Codes}", string.Join(", ", codes));
