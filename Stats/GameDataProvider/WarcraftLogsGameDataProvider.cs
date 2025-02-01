@@ -1,5 +1,6 @@
 namespace Stats.GameDataProvider;
 
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using GraphQL;
 using GraphQL.Client.Abstractions.Websocket;
@@ -16,7 +17,26 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		this.log = log;
 	}
 
-	public async Task<List<string>> GetReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, CancellationToken cancellationToken = default)
+	// public async Task<List<string>> GetReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, CancellationToken cancellationToken = default)
+	// {
+	// 	var reportsList = new GraphQLRequest
+	// 	{
+	// 		Query = File.ReadAllText("reportsList.graphql"),
+	// 		Variables = new
+	// 		{
+	// 			guildName = guildName,
+	// 			guildServerSlug = guildServerSlug,
+	// 			guildServerRegion = guildServerRegion,
+	// 			zoneID = zoneID
+	// 		}
+	// 	};
+
+	// 	var resp = await this.ExecuteAsync<ReportsListMessage>(reportsList, cancellationToken);
+	// 	this.CheckRateLimit(resp.RateLimitData);
+	// 	return resp.ReportData.Reports.Data.Select(r => r.Code).ToList();
+	// }
+
+	public async IAsyncEnumerable<Report> GetReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var reportsList = new GraphQLRequest
 		{
@@ -32,26 +52,44 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 
 		var resp = await this.ExecuteAsync<ReportsListMessage>(reportsList, cancellationToken);
 		this.CheckRateLimit(resp.RateLimitData);
-		return resp.ReportData.Reports.Data.Select(r => r.Code).ToList();
-	}
+		var reportCodes = resp.ReportData.Reports.Data.Select(r => r.Code);
 
-	public async Task<dynamic> GetReportDataAsync(string[] codes, CancellationToken cancellationToken = default)
-	{
-		var reportsData = new GraphQLRequest
+		string query = File.ReadAllText("reportsData.graphql");
+
+		foreach (var code in reportCodes)
 		{
-			Query = File.ReadAllText("reportsData.graphql"),
-			Variables = new
+			var reportsData = new GraphQLRequest
 			{
-				codes = codes
-			}
-		};
+				Query = query,
+				Variables = new
+				{
+					code = code
+				}
+			};
 
-		return this.ExecuteAsync<dynamic>(reportsData, cancellationToken);
+			var reportsDataResp = await this.ExecuteAsync<ReportsDataMessage>(reportsData, cancellationToken);
+			this.CheckRateLimit(reportsDataResp.RateLimitData);
+			yield return reportsDataResp.ReportData.Report;
+		}
 	}
 
 	private async Task<T> ExecuteAsync<T>(GraphQLRequest request, CancellationToken cancellationToken)
 	{
-		GraphQLResponse<T> response = await graphQLClient.SendQueryAsync<T>(request, cancellationToken);
+		GraphQLResponse<T>? response;
+		try {
+			response = await graphQLClient.SendQueryAsync<T>(request, cancellationToken);
+		}
+		catch (Exception ex)
+		{
+			log.LogError(ex, "An error occurred while fetching data");
+			throw new GameDataProviderException("An error occurred while fetching data", ex);
+		}
+
+		if (response == null)
+		{
+			throw new GameDataProviderException("An error occurred while fetching data");
+		}
+
 		if (response.Errors != null)
 		{
 			foreach (var error in response.Errors)

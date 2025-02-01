@@ -1,33 +1,37 @@
-query ($codes: [string!]) {
+query ($code: String!) {
     rateLimitData {
         limitPerHour
         pointsSpentThisHour
         pointsResetIn
     }
-    reports(code: $codes) {
-        fights(killType: Encounters) {
-            id
-            encounterID
-            name
-            startTime
+    reportData {
+        report(code: $code) {
+            code
             endTime
-            kill
-            fightPercentage
-            friendlyPlayers
-            averageItemLevel
-            gameZone {
+            fights(killType: Encounters) {
                 id
+                encounterID
                 name
+                startTime
+                endTime
+                kill
+                fightPercentage
+                friendlyPlayers
+                averageItemLevel
+                gameZone {
+                    id
+                    name
+                }
             }
-        }
-        masterData {
-            actors(type: "Player") {
-                id
-                gameID
-                name
-                server
-                type
-                subType
+            masterData {
+                actors(type: "Player") {
+                    id
+                    gameID
+                    name
+                    server
+                    type
+                    subType
+                }
             }
         }
     }

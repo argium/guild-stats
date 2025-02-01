@@ -1,10 +1,13 @@
 namespace Stats.GameDataProvider;
 
-public record ReportsListMessage(
-	RateLimitData RateLimitData,
-	ReportData ReportData
+// Metadata
+public record RateLimitData(
+	int LimitPerHour,
+	double PointsSpentThisHour,
+	int PointsResetIn
 );
 
+// Guild data
 public record GuildData(
 	Guild Guild
 );
@@ -14,10 +17,11 @@ public record Guild(
 	string Name
 );
 
-public record RateLimitData(
-	int LimitPerHour,
-	double PointsSpentThisHour,
-	int PointsResetIn
+
+// Report list
+public record ReportsListMessage(
+	RateLimitData RateLimitData,
+	ReportDataPage ReportData
 );
 
 public record Page<T>(
@@ -31,14 +35,25 @@ public record Page<T>(
 	List<T> Data
 );
 
-public record ReportData(
+public record ReportDataPage(
 	Page<Report> Reports
+);
+
+// Report
+public record ReportsDataMessage(
+	RateLimitData RateLimitData,
+	ReportsData ReportData
+);
+
+public record ReportsData(
+	Report Report
 );
 
 public record Report(
 	string Code,
 	long EndTime,
-	List<Fight> Fights
+	List<Fight> Fights,
+	ReportMasterData MasterData
 );
 
 public record Fight(
@@ -51,4 +66,18 @@ public record Fight(
 	double FightPercentage,
 	List<int> FriendlyPlayers,
 	double AverageItemLevel
+);
+
+public record ReportMasterData(
+	List<ReportActor> Actors
+);
+
+
+public record ReportActor(
+	long GameID,
+	int ID,
+	string Name,
+	string Type,
+	string SubType,
+	string Server
 );
