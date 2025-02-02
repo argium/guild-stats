@@ -1,21 +1,11 @@
-using CsvHelper;
-using GraphQL.Client.Abstractions.Websocket;
-using GraphQL.Client.Http;
-using GraphQL.Client.Serializer.SystemTextJson;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.ServiceDiscovery;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using Stats;
-using Stats.DataWriter;
-using Stats.GameData;
-using Stats.Reports;
-using Stats.TokenProvider;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -35,7 +25,11 @@ public static class Extensions
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
             // Turn on resilience by default
-            http.AddStandardResilienceHandler();
+            http.AddStandardResilienceHandler(config => {
+				config.AttemptTimeout.Timeout = TimeSpan.FromMinutes(1);
+				config.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(2);
+				config.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(3);
+			});
 
             // Turn on service discovery by default
             http.AddServiceDiscovery();
@@ -45,25 +39,7 @@ public static class Extensions
         // builder.Services.Configure<ServiceDiscoveryOptions>(options =>
         // {
         //     options.AllowedSchemes = ["https"];
-        // });
-
-		builder.Services
-			.AddSingleton<ITokenProvider, WarcraftLogsTokenProvider>()
-			.AddSingleton<IGraphQLWebsocketJsonSerializer, SystemTextJsonSerializer>()
-			.AddTransient<IGraphQLWebSocketClient, GraphQLHttpClient>(sp => {
-				var tokenProvider = sp.GetRequiredService<ITokenProvider>();
-				var token = tokenProvider.GetTokenAsync().Result;
-				var log = sp.GetRequiredService<ILogger<LoggingHandler>>();
-				var httpClient = new HttpClient(new LoggingHandler(new HttpClientHandler(), log));
-				httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
-				var client = new GraphQLHttpClient("https://www.warcraftlogs.com/api/v2/client", new SystemTextJsonSerializer(), httpClient);
-				return client;
-			})
-			.Configure<WarcraftLogsOptions>(builder.Configuration.GetSection("WarcraftLogs"))
-			.AddTransient<IGameDataProvider, WarcraftLogsGameDataProvider>()
-			.AddTransient<IReportProducer<RaidVelocityReportRow>, RaidVelocityReportProducer>()
-			.AddSingleton<IDataWriter, CsvDataWriter>();
-
+        // })
 
         return builder;
     }

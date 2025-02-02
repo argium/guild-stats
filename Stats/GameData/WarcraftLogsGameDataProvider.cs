@@ -20,7 +20,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 	{
 		var reportsList = new GraphQLRequest
 		{
-			Query = File.ReadAllText("reportsList.graphql"),
+			Query = GetReportsQuery,
 			Variables = new
 			{
 				guildName = guildName,
@@ -34,13 +34,11 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		this.CheckRateLimit(resp.RateLimitData);
 		var reportCodes = resp.ReportData.Reports.Data.Select(r => r.Code);
 
-		string query = File.ReadAllText("reportsData.graphql");
-
 		foreach (var code in reportCodes)
 		{
 			var reportsData = new GraphQLRequest
 			{
-				Query = query,
+				Query = GetFightDetailsQuery,
 				Variables = new
 				{
 					code = code
@@ -96,4 +94,79 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 			this.log.LogWarning("Rate limit warning: less than 300 points remaining this hour");
 		}
 	}
+
+	private const string GetReportsQuery = """
+query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!, $zoneID: Int!) {
+    rateLimitData {
+        limitPerHour
+        pointsSpentThisHour
+        pointsResetIn
+    }
+    guildData {
+        guild(name: $guildName, serverSlug: $guildServerSlug, serverRegion: $guildServerRegion) {
+            name
+            id
+        }
+    }
+    reportData {
+        reports(guildName: $guildName, guildServerSlug: $guildServerSlug, guildServerRegion: $guildServerRegion, zoneID: $zoneID) {
+            total
+            per_page
+            current_page
+            from
+            to
+            last_page
+            has_more_pages
+            data {
+                code
+                endTime
+            }
+        }
+    }
+}
+""";
+
+	private const string GetFightDetailsQuery = """
+query ($code: String!) {
+    rateLimitData {
+        limitPerHour
+        pointsSpentThisHour
+        pointsResetIn
+    }
+    reportData {
+        report(code: $code) {
+            code
+            startTime
+            endTime
+            fights(killType: Encounters) {
+                id
+                encounterID
+                name
+                difficulty
+                startTime
+                endTime
+                kill
+                fightPercentage
+                friendlyPlayers
+                averageItemLevel
+                gameZone {
+                    id
+                    name
+                }
+            }
+            masterData {
+                actors(type: "Player") {
+                    id
+                    gameID
+                    name
+                    server
+                    type
+                    subType
+                }
+            }
+        }
+    }
+}
+""";
+
 }

@@ -15,10 +15,10 @@ public class CsvDataWriter : IDataWriter
 		}
 
 		using var writer = new StreamWriter(stream);
-		using var csv = new CsvWriter(writer, CultureInfo.CurrentCulture);
+		await using var csv = new CsvWriter(writer, CultureInfo.CurrentCulture);
 		// csv.Context.RegisterClassMap<RaidVelocityReportRow>();
 
 		await csv.WriteRecordsAsync(rows, cancellationToken);
-		await writer.FlushAsync(cancellationToken);
+		// await writer.FlushAsync(cancellationToken);
 	}
 }
