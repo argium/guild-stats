@@ -2,5 +2,5 @@ namespace Stats.DataWriter;
 
 public interface IDataWriter
 {
-	Task WriteAsync<T>(string datasetName, IEnumerable<T> rows, CancellationToken cancellationToken = default);
+	Task WriteAsync<T>(string datasetName, Stream stream, IAsyncEnumerable<T> rows, CancellationToken cancellationToken = default);
 }

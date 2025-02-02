@@ -6,7 +6,7 @@ namespace Stats.DataWriter;
 
 public class CsvDataWriter : IDataWriter
 {
-	public async Task WriteAsync<T>(string datasetName, IEnumerable<T> rows, CancellationToken cancellationToken = default)
+	public async Task WriteAsync<T>(string datasetName, Stream stream, IAsyncEnumerable<T> rows, CancellationToken cancellationToken = default)
 	{
 		// check reportname is alphanumeric or spaces only
 		if (!Regex.IsMatch(datasetName, @"^[a-zA-Z0-9\s]*$"))
@@ -14,7 +14,7 @@ public class CsvDataWriter : IDataWriter
 			throw new ArgumentException("Report name must be alphanumeric or spaces only");
 		}
 
-		using var writer = new StreamWriter(datasetName + ".csv", false);
+		using var writer = new StreamWriter(stream);
 		using var csv = new CsvWriter(writer, CultureInfo.CurrentCulture);
 		// csv.Context.RegisterClassMap<RaidVelocityReportRow>();
 
