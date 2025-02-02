@@ -1,4 +1,4 @@
-namespace Stats.GameDataProvider;
+namespace Stats.GameData;
 
 using System.Runtime.CompilerServices;
 using GraphQL;
@@ -16,7 +16,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		this.log = log;
 	}
 
-	public async IAsyncEnumerable<Report> GetReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	public async IAsyncEnumerable<Report> GetAllFightReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var reportsList = new GraphQLRequest
 		{

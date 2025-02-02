@@ -1,14 +1,20 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
-namespace Stats.GameDataProvider;
+namespace Stats.GameData;
 
 public class FileGameDataProvider : IGameDataProvider
 {
-	public async IAsyncEnumerable<Report> GetReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	public async IAsyncEnumerable<Report> GetAllFightReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		using var file = new FileStream(GetFileName(guildName, guildServerSlug, guildServerRegion, zoneID), FileMode.Open);
 		var reports = await JsonSerializer.DeserializeAsync<List<Report>>(file, cancellationToken: cancellationToken);
+
+		if (reports == null)
+		{
+			yield break;
+		}
+
 		foreach (var report in reports)
 		{
 			yield return report;

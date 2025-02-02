@@ -22,9 +22,6 @@ query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: Strin
             data {
                 code
                 endTime
-                fights {
-                    name
-                }
             }
         }
     }

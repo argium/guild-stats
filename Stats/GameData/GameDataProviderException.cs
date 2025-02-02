@@ -1,4 +1,4 @@
-namespace Stats.GameDataProvider;
+namespace Stats.GameData;
 
 public class GameDataProviderException : Exception
 {
