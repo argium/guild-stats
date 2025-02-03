@@ -6,24 +6,29 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Stats.GameData;
 
-public class RaidVelocityReportProducer : IReportProducer<RaidVelocityReportRow>
+public class GuildReportProducer : IGuildReportProducer
 {
-	private readonly ILogger<RaidVelocityReportProducer> _log;
+	private readonly ILogger<GuildReportProducer> _log;
 	private readonly IGameDataProvider _gameDataProvider;
 
-	public RaidVelocityReportProducer(IGameDataProvider gameDataProvider, ILogger<RaidVelocityReportProducer> log)
+	public GuildReportProducer(IGameDataProvider gameDataProvider, ILogger<GuildReportProducer> log)
 	{
 		_log = log;
 		_gameDataProvider = gameDataProvider;
 	}
 
-	public async IAsyncEnumerable<RaidVelocityReportRow> GetDataAsync(ReportArgs args, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	public async IAsyncEnumerable<RaidVelocityReportRow> GetRaidVelocityReportDataAsync(
+		string guildName,
+		string realmName,
+		string region,
+		int zoneID,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var rawReports = new List<Report>();
 		var reports = new List<Report>();
 		int i = 0;
 
-		await foreach (var report in _gameDataProvider.GetAllFightReportsAsync(args.GuildName, args.RealmName, args.Region, args.ZoneID, cancellationToken))
+		await foreach (var report in _gameDataProvider.GetAllFightReportsAsync(guildName, realmName, region, zoneID, cancellationToken))
 		{
 			rawReports.Add(report);
 
@@ -81,7 +86,7 @@ public class RaidVelocityReportProducer : IReportProducer<RaidVelocityReportRow>
 				}
 				else if (!value.Add(row))
 				{
-					_log.LogWarning("Duplicate row for {Name} ({EncounterID}) in report {ReportCode}", fight.Name, fight.EncounterID, report.Code);
+					_log.LogWarning("Duplicate fight in {ReportCode}: {Row}", report.Code, row);
 				}
 			}
 		}

@@ -1,4 +1,3 @@
-using CsvHelper;
 using GraphQL.Client.Abstractions.Websocket;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
@@ -31,7 +30,7 @@ builder.Services
 	})
 	.Configure<WarcraftLogsOptions>(builder.Configuration.GetSection("WarcraftLogs"))
 	.AddTransient<IGameDataProvider, WarcraftLogsGameDataProvider>()
-	.AddTransient<IReportProducer<RaidVelocityReportRow>, RaidVelocityReportProducer>()
+	.AddTransient<IGuildReportProducer, GuildReportProducer>()
 	.AddSingleton<IDataWriter, CsvDataWriter>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -47,45 +46,26 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapPost("/chart", async (ChartArgs args, [FromServices] IReportProducer<RaidVelocityReportRow> report, [FromServices] IDataWriter writer, CancellationToken ct) =>
+app.MapPost("/chart", (GuildReportRequest args, [FromServices] IGuildReportProducer report, [FromServices] IDataWriter writer, CancellationToken ct) =>
 {
-	IAsyncEnumerable<RaidVelocityReportRow> data = report.GetDataAsync(new ReportArgs(args.GuildName, args.RealmName, args.Region, (int)args.Zone), ct);
-
-	switch (args.Extension)
+	IAsyncEnumerable<RaidVelocityReportRow> data = report.GetRaidVelocityReportDataAsync(args.GuildName, args.RealmName, args.Region.ToString(), (int)args.Zone, ct);
+	switch (args.FileType)
 	{
-		case Extension.CSV:
+		case FileType.CSV:
 			return Results.Stream(async stream => await writer.WriteAsync("RaidVelocity", stream, data, ct), "text/csv");
 
-		case Extension.JPG:
+		case FileType.JPG:
 			throw new NotImplementedException();
 
 		default:
 			throw new NotSupportedException();
 	}
 })
-.WithName("GetChart");
+.WithName("CreateChart");
+
+
+
 
 app.MapDefaultEndpoints();
 
 app.Run();
-
-record ChartArgs
-{
-	public required string GuildName { get; set; }
-	public required string RealmName { get; set; }
-	public required string Region { get; set; }
-	public required Zone Zone { get; set; }
-	public required Extension Extension { get; set; }
-}
-
-enum Zone
-{
-	NerubarPalace = 38,
-}
-
-enum Extension
-{
-	CSV,
-
-	JPG,
-}

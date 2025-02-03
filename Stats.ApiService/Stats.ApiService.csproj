@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Stats.ServiceDefaults\Stats.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Stats\Stats.csproj" />
+    <ProjectReference Include="..\Stats.Domain\Stats.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
