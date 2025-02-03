@@ -1,3 +1,4 @@
+using System.Globalization;
 using GraphQL.Client.Abstractions.Websocket;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.SystemTextJson;
@@ -7,6 +8,8 @@ using Stats.DataWriter;
 using Stats.GameData;
 using Stats.Reports;
 using Stats.TokenProvider;
+
+CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-AU");
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -68,8 +68,9 @@ public class GuildReportProducer : IGuildReportProducer
 					rowsForEncounter[fight.EncounterID] = value;
 				}
 
+				// TODO: verify that the datetime format can be used to create charts in excel
 				var row = new RaidVelocityReportRow(
-					DateTimeOffset.FromUnixTimeMilliseconds(report.StartTime + fight.StartTime).ToOffset(TimeSpan.FromHours(11)),
+					DateTimeOffset.FromUnixTimeMilliseconds(report.StartTime + fight.StartTime).ToOffset(TimeSpan.FromHours(11)).DateTime,
 					fight.EncounterID,
 					fight.Name,
 					fight.Kill,

@@ -3,7 +3,7 @@ using CsvHelper.Configuration;
 namespace Stats.Reports;
 
 public record RaidVelocityReportRow(
-	DateTimeOffset Time,
+	DateTime Time,
 	int EncounterID,
 	string Name,
 	bool Killed,
