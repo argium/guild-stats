@@ -1,19 +1,23 @@
 namespace Stats.GameData;
 
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using GraphQL;
 using GraphQL.Client.Abstractions.Websocket;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
 public class WarcraftLogsGameDataProvider : IGameDataProvider
 {
-	private readonly IGraphQLWebSocketClient graphQLClient;
-	private readonly ILogger<WarcraftLogsGameDataProvider> log;
+	private readonly IGraphQLWebSocketClient _graphQLClient;
+	private readonly ILogger<WarcraftLogsGameDataProvider> _log;
+	private readonly IDistributedCache _cache;
 
-	public WarcraftLogsGameDataProvider(IGraphQLWebSocketClient graphQLClient, ILogger<WarcraftLogsGameDataProvider> log)
+	public WarcraftLogsGameDataProvider(IGraphQLWebSocketClient graphQLClient, IDistributedCache cache, ILogger<WarcraftLogsGameDataProvider> log)
 	{
-		this.graphQLClient = graphQLClient;
-		this.log = log;
+		_graphQLClient = graphQLClient;
+		_log = log;
+		_cache = cache;
 	}
 
 	public async IAsyncEnumerable<Report> GetAllFightReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -45,8 +49,22 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 				}
 			};
 
+			var cachedValue = await _cache.GetAsync("report:" + code, cancellationToken);
+
+			if (cachedValue != null)
+			{
+				this._log.LogInformation("Cache hit for report {Code}", code);
+				var report = JsonSerializer.Deserialize<Report>(cachedValue);
+				yield return report;
+				continue;
+			}
+
 			var reportsDataResp = await this.ExecuteAsync<ReportsDataMessage>(reportsData, cancellationToken);
 			this.CheckRateLimit(reportsDataResp.RateLimitData);
+			_cache.Set("report:" + code, JsonSerializer.SerializeToUtf8Bytes(reportsDataResp.ReportData.Report), new DistributedCacheEntryOptions
+			{
+				AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+			});
 			yield return reportsDataResp.ReportData.Report;
 		}
 	}
@@ -55,7 +73,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 	{
 		GraphQLResponse<T>? response;
 		try {
-			response = await graphQLClient.SendQueryAsync<T>(request, cancellationToken);
+			response = await _graphQLClient.SendQueryAsync<T>(request, cancellationToken);
 		}
 		catch (Exception ex)
 		{
@@ -71,7 +89,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		{
 			foreach (var error in response.Errors)
 			{
-				log.LogError(error.Message);
+				_log.LogError(error.Message);
 			}
 
 			throw new GameDataProviderException("An error occurred while fetching data: GraphQL errors");
@@ -87,11 +105,11 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 
 	private void CheckRateLimit(RateLimitData rateLimitData)
 	{
-		this.log.LogDebug("Rate limit: {LimitPerHour} points per hour, {PointsSpentThisHour} points spent this hour, {PointsResetIn} seconds until reset", rateLimitData.LimitPerHour, rateLimitData.PointsSpentThisHour, rateLimitData.PointsResetIn);
+		this._log.LogDebug("Rate limit: {LimitPerHour} points per hour, {PointsSpentThisHour} points spent this hour, {PointsResetIn} seconds until reset", rateLimitData.LimitPerHour, rateLimitData.PointsSpentThisHour, rateLimitData.PointsResetIn);
 
 		if (rateLimitData.LimitPerHour - rateLimitData.PointsSpentThisHour < 300)
 		{
-			this.log.LogWarning("Rate limit warning: less than 300 points remaining this hour");
+			this._log.LogWarning("Rate limit warning: less than 300 points remaining this hour");
 		}
 	}
 

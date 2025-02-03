@@ -34,7 +34,8 @@ builder.Services
 	.Configure<WarcraftLogsOptions>(builder.Configuration.GetSection("WarcraftLogs"))
 	.AddTransient<IGameDataProvider, WarcraftLogsGameDataProvider>()
 	.AddTransient<IGuildReportProducer, GuildReportProducer>()
-	.AddSingleton<IDataWriter, CsvDataWriter>();
+	.AddSingleton<IDataWriter, CsvDataWriter>()
+	.AddDistributedMemoryCache();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
