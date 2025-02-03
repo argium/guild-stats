@@ -68,7 +68,6 @@ public class GuildReportProducer : IGuildReportProducer
 					rowsForEncounter[fight.EncounterID] = value;
 				}
 
-				// TODO: verify that the datetime format can be used to create charts in excel
 				var row = new RaidVelocityReportRow(
 					DateTimeOffset.FromUnixTimeMilliseconds(report.StartTime + fight.StartTime).ToOffset(TimeSpan.FromHours(11)).DateTime,
 					fight.EncounterID,
@@ -79,13 +78,16 @@ public class GuildReportProducer : IGuildReportProducer
 				);
 
 				// Add the fight and, if it was the kill, record the encounter ID so we don't process future pulls.
-				if (value.Add(row) && fight.Kill)
+				if (value.Add(row))
 				{
-					killedEncounters.Add(fight.EncounterID);
-					var killTime = DateTimeOffset.FromUnixTimeMilliseconds(report.StartTime + fight.EndTime).ToOffset(TimeSpan.FromHours(11));
-					_log.LogInformation("{Name} ({EncounterID}) first killed in report {ReportCode} at {Time}", fight.Name, fight.EncounterID, report.Code, killTime.ToString(CultureInfo.CurrentCulture));
+					if (fight.Kill)
+					{
+						killedEncounters.Add(fight.EncounterID);
+						var killTime = DateTimeOffset.FromUnixTimeMilliseconds(report.StartTime + fight.EndTime).ToOffset(TimeSpan.FromHours(11));
+						_log.LogInformation("{Name} ({EncounterID}) first killed in report {ReportCode} at {Time}", fight.Name, fight.EncounterID, report.Code, killTime.ToString(CultureInfo.CurrentCulture));
+					}
 				}
-				else if (!value.Add(row))
+				else
 				{
 					_log.LogWarning("Duplicate fight in {ReportCode}: {Row}", report.Code, row);
 				}
