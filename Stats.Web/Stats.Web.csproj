@@ -11,4 +11,8 @@
     <ProjectReference Include="..\Stats.Domain\Stats.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="PSC.Blazor.Components.Chartjs" Version="8.0.8" />
+  </ItemGroup>
+
 </Project>

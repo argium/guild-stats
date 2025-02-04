@@ -1,7 +1,140 @@
 ﻿@page "/"
+@using System.Text.Json.Serialization
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+<Chart Config="_config1" @ref="_chart1"></Chart>
+@code {
+    private BarChartConfig? _config1;
+
+    private Chart? _chart1;
+
+    protected override void OnInitialized()
+    {
+        _config1 = new BarChartConfig()
+        {
+            Options = new Options()
+            {
+                Plugins = new Plugins()
+                {
+                    Legend = new Legend()
+                    {
+                        Align = Align.Center,
+                        Display = false,
+                        Position = LegendPosition.Right
+                    }
+                },
+                Scales = new Dictionary<string, Axis>()
+                {
+                    {
+                        Scales.XAxisId, new Axis()
+                        {
+                            Stacked = true,
+                            Ticks = new Ticks()
+                            {
+                                MaxRotation = 0,
+                                MinRotation = 0
+                            }
+                        }
+                    },
+                    {
+                        Scales.YAxisId, new Axis()
+                        {
+                            Stacked = true
+                        }
+                    }
+                }
+            }
+        };
+
+        _config1.Data.Labels = BarDataExamples.SimpleBarText;
+        _config1.Data.Datasets.Add(new BarDataset()
+        {
+            Label = "Value",
+            Data = BarDataExamples.SimpleBar.Select(l => l.Value).ToList(),
+            BackgroundColor = SampleColors.Palette1,
+            BorderColor = SampleColors.PaletteBorder1,
+            BorderWidth = 1
+        });
+    }
+
+public static class BarDataExamples
+{
+    public static List<string> SimpleBarText = new List<string>() { "January", "February", "March", "April", "May", "June", "July" };
+    public static List<DataItem> SimpleBar = new List<DataItem>() {
+            new DataItem() { Name = "January", Value = 65 },
+            new DataItem() { Name = "February", Value = 59 },
+            new DataItem() { Name = "March", Value = 80 },
+            new DataItem() { Name = "April", Value = 81 },
+            new DataItem() { Name = "May", Value = 56 },
+            new DataItem() { Name = "June", Value = 55 },
+            new DataItem() { Name = "July", Value = 40 }
+        };
+
+    public static List<string> GroupedLabels = new List<string>() { "1900", "1950", "1999", "2050" };
+    public static List<decimal?> Grouped1 = new List<decimal?>() { 133, 221, 783, 2478 };
+    public static List<decimal?> Grouped2 = new List<decimal?>() { 408, 547, 675, 734 };
+
+    public static List<string> CallbackLabels = new List<string>() { "Q1", "Q2", "Q3", "Q4" };
+    public static List<decimal?> CallbackValues = new List<decimal?> { 50000, 60000, 70000, 1800000 };
+}
+
+public class DataItem
+{
+    /// <summary>
+    /// Gets or sets the group.
+    /// </summary>
+    /// <value>
+    /// The group.
+    /// </value>
+    [JsonPropertyName("group")]
+    public string? Group { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the attribute
+    /// </summary>
+    /// <value>
+    /// The name of the attribute
+    /// </value>
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value.
+    /// </summary>
+    /// <value>
+    /// The value
+    /// </value>
+    [JsonPropertyName("value")]
+    public decimal? Value { get; set; }
+}
+
+public static class SampleColors
+{
+    public static List<string> Palette1 = new List<string>()
+        {
+            "rgba(255, 99, 132, 0.2)",
+            "rgba(255, 159, 64, 0.2)",
+            "rgba(255, 205, 86, 0.2)",
+            "rgba(75, 192, 192, 0.2)",
+            "rgba(54, 162, 235, 0.2)",
+            "rgba(153, 102, 255, 0.2)",
+            "rgba(201, 203, 207, 0.2)"
+        };
+
+    public static List<string> PaletteBorder1 = new List<string>()
+        {
+            "rgb(255, 99, 132)",
+            "rgb(255, 159, 64)",
+            "rgb(255, 205, 86)",
+            "rgb(75, 192, 192)",
+            "rgb(54, 162, 235)",
+            "rgb(153, 102, 255)",
+            "rgb(201, 203, 207)"
+        };
+}
+}

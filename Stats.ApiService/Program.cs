@@ -32,7 +32,6 @@ builder.Services.AddSingleton<IGraphQLWebsocketJsonSerializer, SystemTextJsonSer
 		return client;
 	});
 
-
 builder.Services.AddTransient<IGameDataProvider, WarcraftLogsGameDataProvider>()
 		.Configure<WarcraftLogsOptions>(builder.Configuration.GetSection("WarcraftLogs"));
 
@@ -55,7 +54,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.MapPost("/chart", (GuildReportRequest args, [FromServices] IGuildReportProducer report, [FromServices] IDataWriter writer, CancellationToken ct) =>
+app.MapPost("/reports/guild", (GuildReportRequest args, [FromServices] IGuildReportProducer report, [FromServices] IDataWriter writer, CancellationToken ct) =>
 {
 	IAsyncEnumerable<RaidVelocityReportRow> data = report.GetRaidVelocityReportDataAsync(args.GuildName, args.RealmName, args.Region.ToString(), (int)args.Zone, ct);
 	switch (args.FileType)
@@ -69,11 +68,7 @@ app.MapPost("/chart", (GuildReportRequest args, [FromServices] IGuildReportProdu
 		default:
 			throw new NotSupportedException();
 	}
-})
-.WithName("CreateChart");
-
-
-
+});
 
 app.MapDefaultEndpoints();
 
