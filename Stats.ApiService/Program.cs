@@ -19,9 +19,9 @@ builder.AddServiceDefaults();
 // Add services to the container.
 builder.Services.AddProblemDetails();
 
-builder.Services
-	.AddSingleton<ITokenProvider, WarcraftLogsTokenProvider>()
-	.AddSingleton<IGraphQLWebsocketJsonSerializer, SystemTextJsonSerializer>()
+builder.Services.AddSingleton<ITokenProvider, WarcraftLogsTokenProvider>();
+
+builder.Services.AddSingleton<IGraphQLWebsocketJsonSerializer, SystemTextJsonSerializer>()
 	.AddTransient<IGraphQLWebSocketClient, GraphQLHttpClient>(sp => {
 		var tokenProvider = sp.GetRequiredService<ITokenProvider>();
 		var token = tokenProvider.GetTokenAsync().Result;
@@ -30,12 +30,17 @@ builder.Services
 		httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
 		var client = new GraphQLHttpClient("https://www.warcraftlogs.com/api/v2/client", new SystemTextJsonSerializer(), httpClient);
 		return client;
-	})
-	.Configure<WarcraftLogsOptions>(builder.Configuration.GetSection("WarcraftLogs"))
-	.AddTransient<IGameDataProvider, WarcraftLogsGameDataProvider>()
-	.AddTransient<IGuildReportProducer, GuildReportProducer>()
-	.AddSingleton<IDataWriter, CsvDataWriter>()
-	.AddDistributedMemoryCache();
+	});
+
+
+builder.Services.AddTransient<IGameDataProvider, WarcraftLogsGameDataProvider>()
+		.Configure<WarcraftLogsOptions>(builder.Configuration.GetSection("WarcraftLogs"));
+
+builder.Services.AddTransient<IGuildReportProducer, GuildReportProducer>();;
+
+builder.Services.AddSingleton<IDataWriter, CsvDataWriter>();;
+
+builder.AddRedisDistributedCache(connectionName: "cache");
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
