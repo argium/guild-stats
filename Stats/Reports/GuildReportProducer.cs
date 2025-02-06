@@ -59,7 +59,7 @@ public class GuildReportProducer : IGuildReportProducer
 			{
 				// hacky cause the api doesn't want to filter by game zone id
 				// TODO: filter by game zone ID
-				if (fight.Difficulty != (int)Difficulty.Mythic || killedEncounters.Contains(fight.EncounterID) || fight.GameZone.Name != "Nerub'ar Palace")
+				if (fight.Difficulty != (int)Difficulty.Mythic || killedEncounters.Contains(fight.EncounterID) || fight.GameZone.Name != "Nerub-ar Palace")
 				{
 					continue;
 				}
