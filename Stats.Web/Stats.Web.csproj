@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="PSC.Blazor.Components.Chartjs" Version="8.0.8" />
+    <PackageReference Include="Blazor-ApexCharts" Version="5.1.0" />
   </ItemGroup>
 
 </Project>

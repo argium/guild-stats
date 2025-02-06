@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Stats.Domain;
 using Stats.GameData;
 
 public class GuildReportProducer : IGuildReportProducer
@@ -21,14 +22,14 @@ public class GuildReportProducer : IGuildReportProducer
 		string guildName,
 		string realmName,
 		string region,
-		int zoneID,
+		Zone zone,
 		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var rawReports = new List<Report>();
 		var reports = new List<Report>();
 		int i = 0;
 
-		await foreach (var report in _gameDataProvider.GetAllFightReportsAsync(guildName, realmName, region, zoneID, cancellationToken))
+		await foreach (var report in _gameDataProvider.GetAllFightReportsAsync(guildName, realmName, region, zone, cancellationToken))
 		{
 			rawReports.Add(report);
 
@@ -56,8 +57,9 @@ public class GuildReportProducer : IGuildReportProducer
 		{
 			foreach (var fight in report.Fights)
 			{
+				// hacky cause the api doesn't want to filter by game zone id
 				// TODO: filter by game zone ID
-				if (fight.Difficulty != (int)Difficulty.Mythic || killedEncounters.Contains(fight.EncounterID))
+				if (fight.Difficulty != (int)Difficulty.Mythic || killedEncounters.Contains(fight.EncounterID) || fight.GameZone.Name != "Nerub'ar Palace")
 				{
 					continue;
 				}

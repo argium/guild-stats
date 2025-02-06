@@ -6,6 +6,7 @@ using GraphQL;
 using GraphQL.Client.Abstractions.Websocket;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using Stats.Domain;
 
 public class WarcraftLogsGameDataProvider : IGameDataProvider
 {
@@ -20,7 +21,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		_cache = cache;
 	}
 
-	public async IAsyncEnumerable<Report> GetAllFightReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	public async IAsyncEnumerable<Report> GetAllFightReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, Zone zone, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		var reportsList = new GraphQLRequest
 		{
@@ -30,7 +31,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 				guildName = guildName,
 				guildServerSlug = guildServerSlug,
 				guildServerRegion = guildServerRegion,
-				zoneID = zoneID
+				zoneID = (int)zone,
 			}
 		};
 
@@ -63,7 +64,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 			this.CheckRateLimit(reportsDataResp.RateLimitData);
 			_cache.Set("report:" + code, JsonSerializer.SerializeToUtf8Bytes(reportsDataResp.ReportData.Report), new DistributedCacheEntryOptions
 			{
-				AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+				AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
 			});
 			yield return reportsDataResp.ReportData.Report;
 		}
@@ -95,10 +96,15 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 			throw new GameDataProviderException("An error occurred while fetching data: GraphQL errors");
 		}
 
+		if (response.Data == null)
+		{
+			throw new GameDataProviderException("An error occurred while fetching data: data is response");
+		}
+
 		return response.Data;
 	}
 
-	public Task SaveReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, int zoneID, IEnumerable<Report> reports, CancellationToken cancellationToken = default)
+	public Task SaveReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, Zone zone, IEnumerable<Report> reports, CancellationToken cancellationToken = default)
 	{
 		throw new NotImplementedException();
 	}

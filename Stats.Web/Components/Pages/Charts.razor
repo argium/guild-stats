@@ -3,7 +3,6 @@
 @attribute [StreamRendering(true)]
 @rendermode InteractiveServer
 
-@inject ILogger<Charts> Log
 @inject StatsApiClient StatsApi
 @inject IJSRuntime JS
 
@@ -60,7 +59,7 @@
             <option value="">
                 Select instance ...
             </option>
-            <option checked="@(Model!.Zone.ToString() == "Nerub'ar Palace")"
+            <option checked="@(Model!.Zone.ToString() == "NerubarPalace")"
                 value="NerubarPalace">
                 Nerub'ar Palace
             </option>
@@ -79,8 +78,37 @@
     <div>@DisplayMessage</div>
 </EditForm>
 
+@if (Data is not null)
+{
+    <ApexChart TItem="DataPoint" Title="Report" Options="@(ChartOptions)">
+
+    @*    <ApexPointSeries TItem="DataPoint"
+                            Items="@(DataPoints)"
+                            Name="@(Model.GuildName)"
+                            SeriesType="SeriesType.Line"
+                            XValue="e => e.Time"
+                            YValue="e=> e.Value"
+                            /> *@
+
+    @foreach (var series in Data.Series)
+    {
+        <ApexPointSeries TItem="DataPoint"
+                            Items="@(series.Value)"
+                            Name="@(series.Key)"
+                            SeriesType="SeriesType.Line"
+                            XValue="e => e.Time"
+                            YValue="e=> e.Value"
+                            />
+    }
+    </ApexChart>
+}
 
 @code {
+    ApexChartOptions<DataPoint> ChartOptions { get; set; }
+
+    ChartData? Data { get; set; }
+    IEnumerable<DataPoint>? DataPoints => Data.Series.SelectMany(x => x.Value);
+
     string DisplayMessage = string.Empty;
 
     bool RequestPending { get; set; }
@@ -88,13 +116,26 @@
     [SupplyParameterFromForm]
     GuildReportRequest? Model { get; set; }
 
-    protected override void OnInitialized() => Model ??= new() {
-        GuildName = "Resus",
-        RealmName = "Frostmourne",
-        Region = Region.US,
-        Zone = Zone.NerubarPalace,
-        FileType = FileType.CSV,
-    };
+    protected override void OnInitialized()
+    {
+        Model ??= new() {
+                GuildName = "Resus",
+                RealmName = "Frostmourne",
+                Region = Region.US,
+                Zone = Zone.NerubarPalace,
+            };
+
+        @* Data = new ChartData();
+        Data.Series.Add("Series1", [new(DateTime.Parse("2024-01-01"), 10), new(DateTime.Parse("2024-01-02"), 15), new(DateTime.Parse("2024-01-03"), 20)]);
+        Data.Series.Add("Series2", [new(DateTime.Parse("2024-01-04"), 20), new(DateTime.Parse("2024-01-05"), 15), new(DateTime.Parse("2024-01-06"), 10)]); *@
+
+        ChartOptions ??= new ApexChartOptions<DataPoint>();
+        ChartOptions.Chart.Width = 900;
+        ChartOptions.Chart.Height = 500;
+        ChartOptions.Stroke = new Stroke() {
+            Width = 2
+        };
+    }
 
     private async void OnValidSubmit()
     {
@@ -102,10 +143,18 @@
             RequestPending = true;
             DisplayMessage = "Generating chart...";
             StateHasChanged();
-            var fileStream = await StatsApi.GetChartAsync(Model!);
+            Data = await StatsApi.GetGuildReportChartDataAsync<ChartData>(Model!);
+            ChartOptions.Xaxis = new XAxis()
+            {
+                Type = XAxisType.Datetime,
+            };
+
+            DisplayMessage = string.Empty;
+
+            @* var fileStream = await StatsApi.GuildReportRequestAsync(Model!);
             using var streamRef = new DotNetStreamReference(stream: fileStream);
             await JS.InvokeVoidAsync("downloadFileFromStream", $"{Model!.GuildName}-{Model!.RealmName}.csv", streamRef);
-            DisplayMessage = string.Empty;
+            DisplayMessage = string.Empty; *@
         }
         catch (Exception ex) {
             DisplayMessage = $"Error: {ex.Message}";
@@ -115,29 +164,4 @@
             StateHasChanged();
         }
     }
-
-    @* private void Submit()
-    {
-        customValidation?.ClearErrors();
-
-        var errors = new Dictionary<string, List<string>>();
-
-        if (Model!.Classification == "Defense" &&
-                string.IsNullOrEmpty(Model.Description))
-        {
-            errors.Add(nameof(Model.Description),
-                [ "For a 'Defense' ship classification, " +
-                "'Description' is required." ]);
-        }
-
-        if (errors.Any())
-        {
-            customValidation?.DisplayErrors(errors);
-        }
-        else
-        {
-            Log.LogInformation("Submit called: Processing the form");
-        }
-    }     *@
-
 }

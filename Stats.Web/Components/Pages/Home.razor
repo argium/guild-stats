@@ -7,15 +7,15 @@
 
 Welcome to your new app.
 
-<Chart Config="_config1" @ref="_chart1"></Chart>
+@* <Chart Config="ChartConfig" @ref="Chart"></Chart>
 @code {
-    private BarChartConfig? _config1;
+    private LineChartConfig? LineChartConfig { get; set; }
 
-    private Chart? _chart1;
+    private Chart? Chart { get; set; }
 
     protected override void OnInitialized()
     {
-        _config1 = new BarChartConfig()
+        LineChartConfig = new LineChartConfig()
         {
             Options = new Options()
             {
@@ -51,8 +51,8 @@ Welcome to your new app.
             }
         };
 
-        _config1.Data.Labels = BarDataExamples.SimpleBarText;
-        _config1.Data.Datasets.Add(new BarDataset()
+        LineChartConfig.Data.Labels = BarDataExamples.SimpleBarText;
+        LineChartConfig.Data.Datasets.Add(new LineDataset()
         {
             Label = "Value",
             Data = BarDataExamples.SimpleBar.Select(l => l.Value).ToList(),
@@ -137,4 +137,4 @@ public static class SampleColors
             "rgb(201, 203, 207)"
         };
 }
-}
+} *@

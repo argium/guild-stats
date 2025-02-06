@@ -1,3 +1,5 @@
+using Stats.Domain;
+
 namespace Stats.Reports;
 
 public interface IGuildReportProducer
@@ -6,6 +8,6 @@ public interface IGuildReportProducer
 		string guildName,
 		string realmName,
 		string region,
-		int zoneID,
+		Zone zone,
 		CancellationToken cancellationToken = default);
 }

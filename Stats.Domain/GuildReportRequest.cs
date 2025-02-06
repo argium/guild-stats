@@ -17,16 +17,16 @@ public record GuildReportRequest
 	public FileType FileType { get; set; }
 }
 
-public enum Zone
-{
-	NerubarPalace = 38,
-}
+// public enum GameZoneID
+// {
+// 	NerubarPalace = 2660,
+// }
 
 public enum FileType
 {
 	CSV,
 
-	JPG,
+	Chart,
 }
 
 public enum Region

@@ -67,7 +67,8 @@ public record Fight(
 	bool Kill,
 	double FightPercentage,
 	List<int> FriendlyPlayers,
-	double AverageItemLevel
+	double AverageItemLevel,
+	GameZone GameZone
 );
 
 public record ReportMasterData(
@@ -83,6 +84,11 @@ public record ReportActor(
 	string Server
 );
 
+public record GameZone(
+	long Id,
+	string Name
+);
+
 public enum Difficulty
 {
 	Normal = 3,
@@ -90,9 +96,4 @@ public enum Difficulty
 	Heroic = 4,
 
 	Mythic = 5
-}
-
-public static class ZoneID
-{
-	public static readonly int NerubarPalace = 38;
 }

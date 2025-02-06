@@ -1,3 +1,4 @@
+using ApexCharts;
 using Stats.Web;
 using Stats.Web.Components;
 
@@ -18,6 +19,8 @@ builder.Services.AddHttpClient<StatsApiClient>(client =>
         // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
         client.BaseAddress = new("https+http://apiservice");
     });
+
+builder.Services.AddApexCharts();
 
 var app = builder.Build();
 
