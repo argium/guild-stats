@@ -78,9 +78,9 @@
     <div>@DisplayMessage</div>
 </EditForm>
 
-@if (Data is not null)
+@foreach (var data in Datas)
 {
-    <ApexChart TItem="DataPoint" Title="Report" Options="@(ChartOptions)">
+    <ApexChart TItem="DataPoint" Title="Report" Options="@(ChartOptions[data.Key])">
 
     @*    <ApexPointSeries TItem="DataPoint"
                             Items="@(DataPoints)"
@@ -90,7 +90,7 @@
                             YValue="e=> e.Value"
                             /> *@
 
-    @foreach (var series in Data.Series)
+    @foreach (var series in data.Value!.Series)
     {
         <ApexPointSeries TItem="DataPoint"
                             Items="@(series.Value)"
@@ -104,10 +104,15 @@
 }
 
 @code {
-    ApexChartOptions<DataPoint> ChartOptions { get; set; }
+    @* ApexChartOptions<DataPoint> ChartOptions { get; set; }
 
-    ChartData? Data { get; set; }
-    IEnumerable<DataPoint>? DataPoints => Data.Series.SelectMany(x => x.Value);
+    ChartData? Data { get; set; } *@
+
+    Dictionary<Guid, ChartData?> Datas { get; set; } = new();
+
+    Dictionary<Guid, ApexChartOptions<DataPoint>?> ChartOptions { get; set; } = new();
+
+    @* IEnumerable<DataPoint>? DataPoints => Data.Series.SelectMany(x => x.Value); *@
 
     string DisplayMessage = string.Empty;
 
@@ -129,12 +134,8 @@
         Data.Series.Add("Series1", [new(DateTime.Parse("2024-01-01"), 10), new(DateTime.Parse("2024-01-02"), 15), new(DateTime.Parse("2024-01-03"), 20)]);
         Data.Series.Add("Series2", [new(DateTime.Parse("2024-01-04"), 20), new(DateTime.Parse("2024-01-05"), 15), new(DateTime.Parse("2024-01-06"), 10)]); *@
 
-        ChartOptions ??= new ApexChartOptions<DataPoint>();
-        ChartOptions.Chart.Width = 900;
-        ChartOptions.Chart.Height = 500;
-        ChartOptions.Stroke = new Stroke() {
-            Width = 2
-        };
+
+
     }
 
     private async void OnValidSubmit()
@@ -143,13 +144,30 @@
             RequestPending = true;
             DisplayMessage = "Generating chart...";
             StateHasChanged();
-            Data = await StatsApi.GetGuildReportChartDataAsync<ChartData>(Model!);
-            ChartOptions.Xaxis = new XAxis()
+
+            var id = Guid.NewGuid();
+            Datas.Add(id, await StatsApi.GetGuildReportChartDataAsync<ChartData>(Model!));
+
+            var options = new ApexChartOptions<DataPoint>();
+            options.Chart.Width = 900;
+            options.Chart.Height = 500;
+            options.Stroke = new Stroke() {
+                Width = 2
+            };
+            options.Chart.Group = "reports";
+
+            @* var range = DateTime.Now.ToUnixTimeMilliseconds()
+                    - DateTime.Parse("2024-10-24").ToUnixTimeMilliseconds(); *@
+
+            options.Xaxis = new XAxis()
             {
                 Type = XAxisType.Datetime,
+                @* Range = range, *@
             };
+            ChartOptions.Add(id, options);
 
             DisplayMessage = string.Empty;
+            Model.GuildName = string.Empty;
 
             @* var fileStream = await StatsApi.GuildReportRequestAsync(Model!);
             using var streamRef = new DotNetStreamReference(stream: fileStream);
