@@ -56,30 +56,37 @@ if (app.Environment.IsDevelopment())
 
 app.MapPost("/reports/guild", async (GuildReportRequest args, [FromServices] IGuildReportProducer report, [FromServices] IDataWriter writer, CancellationToken ct) =>
 {
-	IAsyncEnumerable<RaidVelocityReportRow> data = report.GetRaidVelocityReportDataAsync(args.GuildName, args.RealmName, args.Region.ToString(), args.Zone, ct);
-	switch (args.FileType)
+	try
 	{
-		case FileType.CSV:
-			return Results.Stream(async stream => await writer.WriteAsync("RaidVelocity", stream, data, ct), "text/csv");
+		IAsyncEnumerable<RaidVelocityReportRow> data = report.GetRaidVelocityReportDataAsync(args.GuildName, args.RealmName, args.Region.ToString(), args.Zone, ct);
+		switch (args.FileType)
+		{
+			case FileType.CSV:
+				return Results.Stream(async stream => await writer.WriteAsync("RaidVelocity", stream, data, ct), "text/csv");
 
-		case FileType.Chart:
-			var chartData = new ChartData();
+			case FileType.Chart:
+				var chartData = new ChartData();
 
-			await foreach (var row in data)
-			{
-				List<DataPoint> series;
-				if (!chartData.Series.TryGetValue(row.Name, out series))
+				await foreach (var row in data)
 				{
-					series = new List<DataPoint>();
-					chartData.Series.Add(row.Name, series);
+					List<DataPoint> series;
+					if (!chartData.Series.TryGetValue(row.Name, out series))
+					{
+						series = new List<DataPoint>();
+						chartData.Series.Add(row.Name, series);
+					}
+
+					series.Add(new DataPoint(row.Time, new Decimal(row.Percentage)));
 				}
+				return Results.Ok(chartData);
 
-				series.Add(new DataPoint(row.Time, new Decimal(row.Percentage)));
-			}
-			return Results.Ok(chartData);
-
-		default:
-			throw new NotSupportedException();
+			default:
+				throw new NotSupportedException();
+		}
+	}
+	catch (GameDataProviderException ex)
+	{
+		return Results.Problem(title: ex.Message, statusCode: (int)ex.StatusCode);
 	}
 });
 

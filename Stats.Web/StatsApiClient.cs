@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 using Stats.Domain;
 
 namespace Stats.Web;
@@ -12,11 +14,40 @@ public class StatsApiClient(HttpClient httpClient)
 		return await response.Content.ReadAsStreamAsync();
     }
 
-    public async Task<T?> GetGuildReportChartDataAsync<T>(GuildReportRequest args)
+    public async Task<Response<ChartData?>> GetGuildReportChartDataAsync(GuildReportRequest args)
     {
+		HttpResponseMessage? response = null;
 		args.FileType = FileType.Chart;
-        var response = await httpClient.PostAsJsonAsync("/reports/guild", args);
-		response.EnsureSuccessStatusCode();
-		return await response.Content.ReadFromJsonAsync<T>();
+		try {
+			response = await httpClient.PostAsJsonAsync("/reports/guild", args);
+			response.EnsureSuccessStatusCode();
+			// return await response.Content.ReadFromJsonAsync<T>();
+
+			return new() { Value = await response.Content.ReadFromJsonAsync<ChartData>() };
+		}
+		catch (HttpRequestException hex) when (response != null)
+		{
+			var problem = await response.Content.ReadFromJsonAsync<ClientProblemDetails>();
+			return new () { Error = problem };
+		}
     }
+}
+
+public record Response<T>
+{
+	public T? Value { get; set; }
+	public ClientProblemDetails? Error { get; set; }
+}
+
+public class ClientProblemDetails
+{
+    public string Type { get; set; } = default!;
+
+    public string Title { get; set; } = default!;
+
+    public int Status { get; set; } = default!;
+
+    public string Detail { get; set; } = default!;
+
+    public string Instance { get; set; } = default!;
 }

@@ -1,4 +1,4 @@
-﻿@page "/charts"
+@page "/charts"
 @using Stats.Domain
 @attribute [StreamRendering(true)]
 @rendermode InteractiveServer
@@ -55,7 +55,7 @@
     </div>
     <div>
         Raid instance:
-        <InputSelect @bind-Value="Model!.Zone">
+        <InputSelect @bind-Value="Model!.Zone" disabled="@(ChartDisplayed)">
             <option value="">
                 Select instance ...
             </option>
@@ -80,9 +80,9 @@
 
 @foreach (var data in Datas)
 {
-    <ApexChart TItem="DataPoint" Title="Report" Options="@(ChartOptions[data.Key])">
+    <ApexChart TItem="DataPoint" Title="@(data.Key)" Options="@(ChartOptions[data.Key])">
 
-    @*    <ApexPointSeries TItem="DataPoint"
+        @*    <ApexPointSeries TItem="DataPoint"
                             Items="@(DataPoints)"
                             Name="@(Model.GuildName)"
                             SeriesType="SeriesType.Line"
@@ -90,37 +90,29 @@
                             YValue="e=> e.Value"
                             /> *@
 
-    @foreach (var series in data.Value!.Series)
-    {
-        <ApexPointSeries TItem="DataPoint"
-                            Items="@(series.Value)"
-                            Name="@(series.Key)"
-                            SeriesType="SeriesType.Line"
-                            XValue="e => e.Time"
-                            YValue="e=> e.Value"
-                            />
-    }
+        @foreach (var series in data.Value!.Series)
+        {
+            <ApexPointSeries TItem="DataPoint"
+            Items="@(series.Value)"
+            Name="@(series.Key)"
+            SeriesType="SeriesType.Line"
+            XValue="e => e.Time"
+            YValue="e=> e.Value"
+            />
+        }
     </ApexChart>
 }
 
 @code {
-    @* ApexChartOptions<DataPoint> ChartOptions { get; set; }
 
-    ChartData? Data { get; set; } *@
-
-    Dictionary<Guid, ChartData?> Datas { get; set; } = new();
-
-    Dictionary<Guid, ApexChartOptions<DataPoint>?> ChartOptions { get; set; } = new();
-
-    @* IEnumerable<DataPoint>? DataPoints => Data.Series.SelectMany(x => x.Value); *@
-
+    Dictionary<string, ChartData?> Datas { get; set; } = new();
+    Dictionary<string, ApexChartOptions<DataPoint>?> ChartOptions { get; set; } = new();
     string DisplayMessage = string.Empty;
-
-    bool RequestPending { get; set; }
+    bool RequestPending;
+    bool ChartDisplayed;
 
     [SupplyParameterFromForm]
     GuildReportRequest? Model { get; set; }
-
     protected override void OnInitialized()
     {
         Model ??= new() {
@@ -130,12 +122,8 @@
                 Zone = Zone.NerubarPalace,
             };
 
-        @* Data = new ChartData();
-        Data.Series.Add("Series1", [new(DateTime.Parse("2024-01-01"), 10), new(DateTime.Parse("2024-01-02"), 15), new(DateTime.Parse("2024-01-03"), 20)]);
-        Data.Series.Add("Series2", [new(DateTime.Parse("2024-01-04"), 20), new(DateTime.Parse("2024-01-05"), 15), new(DateTime.Parse("2024-01-06"), 10)]); *@
-
-
-
+        RequestPending = false;
+        ChartDisplayed = false;
     }
 
     private async void OnValidSubmit()
@@ -145,29 +133,35 @@
             DisplayMessage = "Generating chart...";
             StateHasChanged();
 
-            var id = Guid.NewGuid();
-            Datas.Add(id, await StatsApi.GetGuildReportChartDataAsync<ChartData>(Model!));
+            var result = await StatsApi.GetGuildReportChartDataAsync(Model!);
 
-            var options = new ApexChartOptions<DataPoint>();
-            options.Chart.Width = 900;
-            options.Chart.Height = 500;
-            options.Stroke = new Stroke() {
-                Width = 2
-            };
-            options.Chart.Group = "reports";
+            string key = $"{Model!.GuildName}-{Model!.RealmName}";
+            if (result.Value is not null) {
+                Datas.Add(key, result.Value);
 
-            @* var range = DateTime.Now.ToUnixTimeMilliseconds()
-                    - DateTime.Parse("2024-10-24").ToUnixTimeMilliseconds(); *@
+                var options = new ApexChartOptions<DataPoint>();
+                options.Chart.Width = 900;
+                options.Chart.Height = 500;
+                options.Stroke = new Stroke() {
+                    Width = 2
+                };
+                options.Chart.Group = "reports";
 
-            options.Xaxis = new XAxis()
-            {
-                Type = XAxisType.Datetime,
-                @* Range = range, *@
-            };
-            ChartOptions.Add(id, options);
+                @* var range = DateTime.Now.ToUnixTimeMilliseconds()
+                        - DateTime.Parse("2024-10-24").ToUnixTimeMilliseconds(); *@
 
-            DisplayMessage = string.Empty;
-            Model.GuildName = string.Empty;
+                options.Xaxis = new XAxis() {
+                    Type = XAxisType.Datetime,
+                };
+                ChartOptions.Add(key, options);
+                Model!.GuildName = " ";
+                DisplayMessage = string.Empty;
+                ChartDisplayed = true;
+            }
+
+            if (result.Error != null) {
+                DisplayMessage = $"Error: {result.Error.Title}";
+            }
 
             @* var fileStream = await StatsApi.GuildReportRequestAsync(Model!);
             using var streamRef = new DotNetStreamReference(stream: fileStream);

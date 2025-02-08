@@ -93,7 +93,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 				_log.LogError(error.Message);
 			}
 
-			throw new GameDataProviderException("An error occurred while fetching data: GraphQL errors");
+			throw new GameDataProviderException(response.Errors.FirstOrDefault()?.Message ?? "A GraphQL error occurred.");
 		}
 
 		if (response.Data == null)
