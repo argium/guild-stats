@@ -1,5 +1,3 @@
-using Stats.Domain;
-
 namespace Stats.GameData;
 
 public interface IGameDataProvider

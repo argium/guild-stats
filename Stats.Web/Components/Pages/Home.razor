@@ -1,140 +1,83 @@
-﻿@page "/"
-@using System.Text.Json.Serialization
+@page "/"
+@using Stats.Domain
+@* @attribute [StreamRendering(true)] *@
+@* @rendermode InteractiveServer *@
 
-<PageTitle>Home</PageTitle>
+@inject StatsApiClient StatsApi
 
-<h1>Hello, world!</h1>
+<PageTitle>OCE Guild Stats</PageTitle>
 
-Welcome to your new app.
+<h1>Undermine Raid Velocity</h1>
 
-@* <Chart Config="ChartConfig" @ref="Chart"></Chart>
+<p>@Message</p>
+
+@foreach (var chart in ChartDatas)
+{
+    if (chart == null) continue;
+
+    if (chart.Error != null) {
+        <p>@(chart.Error)</p>
+    } else {
+        <RaidVelocityChart GuildName="@(chart.GuildName)" RealmName="@(chart.RealmName)" Data="@(chart.Data)" />
+    }
+}
+
 @code {
-    private LineChartConfig? LineChartConfig { get; set; }
+    int pending = 3;
+    HomeChartData[] ChartDatas = new HomeChartData[3];
 
-    private Chart? Chart { get; set; }
+    string Message = "Loading charts, standby... (this may take upto 60 seconds)";
+
+    private class HomeChartData
+    {
+        public HomeChartData(string guildName, string realmName, string? error, ChartData? data)
+        {
+            GuildName = guildName;
+            RealmName = realmName;
+            Error = error;
+            Data = data;
+        }
+
+        public string GuildName { get; init; }
+        public string RealmName { get; init; }
+        public string? Error { get; init; }
+        public ChartData? Data { get; init; }
+    }
 
     protected override void OnInitialized()
     {
-        LineChartConfig = new LineChartConfig()
-        {
-            Options = new Options()
-            {
-                Plugins = new Plugins()
-                {
-                    Legend = new Legend()
-                    {
-                        Align = Align.Center,
-                        Display = false,
-                        Position = LegendPosition.Right
-                    }
-                },
-                Scales = new Dictionary<string, Axis>()
-                {
-                    {
-                        Scales.XAxisId, new Axis()
-                        {
-                            Stacked = true,
-                            Ticks = new Ticks()
-                            {
-                                MaxRotation = 0,
-                                MinRotation = 0
-                            }
-                        }
-                    },
-                    {
-                        Scales.YAxisId, new Axis()
-                        {
-                            Stacked = true
-                        }
-                    }
-                }
-            }
-        };
-
-        LineChartConfig.Data.Labels = BarDataExamples.SimpleBarText;
-        LineChartConfig.Data.Datasets.Add(new LineDataset()
-        {
-            Label = "Value",
-            Data = BarDataExamples.SimpleBar.Select(l => l.Value).ToList(),
-            BackgroundColor = SampleColors.Palette1,
-            BorderColor = SampleColors.PaletteBorder1,
-            BorderWidth = 1
-        });
+        FetchAsync(0, new() { GuildName = "Resus", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace });
+        FetchAsync(1, new() { GuildName = "Da Bishes", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace });
+        FetchAsync(2, new() { GuildName = "Vortex", RealmName = "Barthilas", Region = Region.US, Zone = Zone.NerubarPalace });
     }
 
-public static class BarDataExamples
-{
-    public static List<string> SimpleBarText = new List<string>() { "January", "February", "March", "April", "May", "June", "July" };
-    public static List<DataItem> SimpleBar = new List<DataItem>() {
-            new DataItem() { Name = "January", Value = 65 },
-            new DataItem() { Name = "February", Value = 59 },
-            new DataItem() { Name = "March", Value = 80 },
-            new DataItem() { Name = "April", Value = 81 },
-            new DataItem() { Name = "May", Value = 56 },
-            new DataItem() { Name = "June", Value = 55 },
-            new DataItem() { Name = "July", Value = 40 }
-        };
+    private async Task FetchAsync(int index, GuildReportRequest request)
+    {
+        try {
+            ChartData? data = null;
+            string? error = null;
 
-    public static List<string> GroupedLabels = new List<string>() { "1900", "1950", "1999", "2050" };
-    public static List<decimal?> Grouped1 = new List<decimal?>() { 133, 221, 783, 2478 };
-    public static List<decimal?> Grouped2 = new List<decimal?>() { 408, 547, 675, 734 };
+            var result = await StatsApi.GetGuildReportChartDataAsync(request);
+            if (result.Value is not null) {
+                data = result.Value;
+            }
 
-    public static List<string> CallbackLabels = new List<string>() { "Q1", "Q2", "Q3", "Q4" };
-    public static List<decimal?> CallbackValues = new List<decimal?> { 50000, 60000, 70000, 1800000 };
+            if (result.Error != null) {
+                error = $"Error: {result.Error.Title}";
+            }
+
+            ChartDatas[index] = new(request.GuildName, request.RealmName, error, data);
+        }
+        catch (Exception ex) {
+            ChartDatas[index] = new(request.GuildName, request.RealmName, $"Error: {ex.Message}", null);
+        }
+        finally {
+            int x = Interlocked.Decrement(ref pending);
+            if (x == 0)
+            {
+                Message = string.Empty;
+            }
+            StateHasChanged();
+        }
+    }
 }
-
-public class DataItem
-{
-    /// <summary>
-    /// Gets or sets the group.
-    /// </summary>
-    /// <value>
-    /// The group.
-    /// </value>
-    [JsonPropertyName("group")]
-    public string? Group { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name of the attribute
-    /// </summary>
-    /// <value>
-    /// The name of the attribute
-    /// </value>
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the value.
-    /// </summary>
-    /// <value>
-    /// The value
-    /// </value>
-    [JsonPropertyName("value")]
-    public decimal? Value { get; set; }
-}
-
-public static class SampleColors
-{
-    public static List<string> Palette1 = new List<string>()
-        {
-            "rgba(255, 99, 132, 0.2)",
-            "rgba(255, 159, 64, 0.2)",
-            "rgba(255, 205, 86, 0.2)",
-            "rgba(75, 192, 192, 0.2)",
-            "rgba(54, 162, 235, 0.2)",
-            "rgba(153, 102, 255, 0.2)",
-            "rgba(201, 203, 207, 0.2)"
-        };
-
-    public static List<string> PaletteBorder1 = new List<string>()
-        {
-            "rgb(255, 99, 132)",
-            "rgb(255, 159, 64)",
-            "rgb(255, 205, 86)",
-            "rgb(75, 192, 192)",
-            "rgb(54, 162, 235)",
-            "rgb(153, 102, 255)",
-            "rgb(201, 203, 207)"
-        };
-}
-} *@

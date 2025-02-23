@@ -1,20 +1,18 @@
-namespace Stats.GameData;
 
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using GraphQL;
 using GraphQL.Client.Abstractions.Websocket;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging;
-using Stats.Domain;
+using Microsoft.Extensions.Caching.Hybrid;
 
+namespace Stats.GameData;
 public class WarcraftLogsGameDataProvider : IGameDataProvider
 {
 	private readonly IGraphQLWebSocketClient _graphQLClient;
 	private readonly ILogger<WarcraftLogsGameDataProvider> _log;
-	private readonly IDistributedCache _cache;
+	private readonly HybridCache _cache;
 
-	public WarcraftLogsGameDataProvider(IGraphQLWebSocketClient graphQLClient, IDistributedCache cache, ILogger<WarcraftLogsGameDataProvider> log)
+	public WarcraftLogsGameDataProvider(IGraphQLWebSocketClient graphQLClient, HybridCache cache, ILogger<WarcraftLogsGameDataProvider> log)
 	{
 		_graphQLClient = graphQLClient;
 		_log = log;
@@ -50,23 +48,20 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 				}
 			};
 
-			var cachedValue = await _cache.GetAsync("report:" + code, cancellationToken);
+			var cacheKey = "report:" + code;
+			var value = await _cache.GetOrCreateAsync(
+				cacheKey,
+				async (ct) =>
+				{
+					this._log.LogInformation("Cache miss for report code {Code}", code);
+					var reportsDataResp = await this.ExecuteAsync<ReportsDataMessage>(reportsData, cancellationToken);
+					this.CheckRateLimit(reportsDataResp.RateLimitData);
+					return reportsDataResp.ReportData.Report;
+				}, 
+				options: new() { Expiration = TimeSpan.FromHours(24) },
+				cancellationToken: cancellationToken);
 
-			if (cachedValue != null)
-			{
-				this._log.LogInformation("Cache hit for report {Code}", code);
-				var report = JsonSerializer.Deserialize<Report>(cachedValue);
-				yield return report;
-				continue;
-			}
-
-			var reportsDataResp = await this.ExecuteAsync<ReportsDataMessage>(reportsData, cancellationToken);
-			this.CheckRateLimit(reportsDataResp.RateLimitData);
-			_cache.Set("report:" + code, JsonSerializer.SerializeToUtf8Bytes(reportsDataResp.ReportData.Report), new DistributedCacheEntryOptions
-			{
-				AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
-			});
-			yield return reportsDataResp.ReportData.Report;
+			yield return value;
 		}
 	}
 

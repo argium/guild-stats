@@ -1,5 +1,3 @@
-using CsvHelper.Configuration;
-
 namespace Stats.Reports;
 
 public record RaidVelocityReportRow(

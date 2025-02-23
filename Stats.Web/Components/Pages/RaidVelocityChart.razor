@@ -1,0 +1,53 @@
+@using Stats.Domain
+
+<ApexChart TItem="DataPoint" Title="@($"{GuildName}-{RealmName}")" Options="@Options">
+
+    @*    <ApexPointSeries TItem="DataPoint"
+                        Items="@(DataPoints)"
+                        Name="@(Model.GuildName)"
+                        SeriesType="SeriesType.Line"
+                        XValue="e => e.Time"
+                        YValue="e=> e.Value"
+                        /> *@
+
+    @foreach (var series in Data.Series)
+    {
+        <ApexPointSeries TItem="DataPoint"
+        Items="@(series.Value)"
+        Name="@(series.Key)"
+        SeriesType="SeriesType.Line"
+        XValue="e => e.Time"
+        YValue="e=> e.Value"
+        />
+    }
+</ApexChart>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string GuildName { get; set; }
+
+    [Parameter, EditorRequired]
+    public required string RealmName { get; set; }
+
+    [Parameter, EditorRequired]
+    public required ChartData Data { get; set; }
+
+    ApexChartOptions<DataPoint> Options { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        Options.Chart.Width = 900;
+        Options.Chart.Height = 500;
+        Options.Stroke = new Stroke() {
+            Width = 2
+        };
+        Options.Chart.Group = "reports";
+
+        @* var range = DateTime.Now.ToUnixTimeMilliseconds()
+                - DateTime.Parse("2024-10-24").ToUnixTimeMilliseconds(); *@
+
+        Options.Xaxis = new XAxis() {
+            Type = XAxisType.Datetime,
+        };
+    }
+}

@@ -1,5 +1,3 @@
-using System;
-
 namespace Stats.Domain;
 
 public record ChartData

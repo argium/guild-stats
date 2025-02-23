@@ -1,5 +1,3 @@
-using Stats.Domain;
-
 namespace Stats.Reports;
 
 public interface IGuildReportProducer

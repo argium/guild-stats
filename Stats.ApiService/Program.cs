@@ -40,6 +40,9 @@ builder.Services.AddTransient<IGuildReportProducer, GuildReportProducer>();;
 builder.Services.AddSingleton<IDataWriter, CsvDataWriter>();;
 
 builder.AddRedisDistributedCache(connectionName: "cache");
+#pragma warning disable EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+builder.Services.AddHybridCache();
+#pragma warning restore EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
