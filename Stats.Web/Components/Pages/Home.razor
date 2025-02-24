@@ -1,83 +1,64 @@
 @page "/"
 @using Stats.Domain
-@* @attribute [StreamRendering(true)] *@
-@* @rendermode InteractiveServer *@
-
-@inject StatsApiClient StatsApi
+@inject StatsApiClient StatsApiClient
 
 <PageTitle>OCE Guild Stats</PageTitle>
 
 <h1>Undermine Raid Velocity</h1>
 
-<p>@Message</p>
-
-@foreach (var chart in ChartDatas)
-{
-    if (chart == null) continue;
-
-    if (chart.Error != null) {
-        <p>@(chart.Error)</p>
-    } else {
-        <RaidVelocityChart GuildName="@(chart.GuildName)" RealmName="@(chart.RealmName)" Data="@(chart.Data)" />
+    @if (GuildData == null)
+    {
+        <p>@Message</p>
     }
-}
+    else
+    {
+        <RaidVelocityChart Data=GuildData />
+    }
 
 @code {
-    int pending = 3;
-    HomeChartData[] ChartDatas = new HomeChartData[3];
+    Dictionary<string, ChartDataResponse>? GuildData;
 
-    string Message = "Loading charts, standby... (this may take upto 60 seconds)";
+    string Message = "Loading charts (this may take upto 60 seconds)...";
 
-    private class HomeChartData
+    protected async override Task OnInitializedAsync()
     {
-        public HomeChartData(string guildName, string realmName, string? error, ChartData? data)
+        GuildData = await LoadsGuildData();
+    }
+
+    async Task<Dictionary<string, ChartDataResponse>> LoadsGuildData()
+    {
+        var guilds = new List<GuildReportRequest>
         {
-            GuildName = guildName;
-            RealmName = realmName;
-            Error = error;
-            Data = data;
-        }
+            new() { GuildName = "Resus", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace },
+            new() { GuildName = "Da Bishes", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace },
+            new() { GuildName = "Vortex", RealmName = "Barthilas", Region = Region.US, Zone = Zone.NerubarPalace },
+        };
 
-        public string GuildName { get; init; }
-        public string RealmName { get; init; }
-        public string? Error { get; init; }
-        public ChartData? Data { get; init; }
+        var tasks = guilds.Select(FetchAsync);
+        var results = await Task.WhenAll(tasks);
+        return results
+            .Where(resp => resp != null)
+            .ToDictionary(resp => resp!.GuildAndRealm, resp => resp!);
     }
 
-    protected override void OnInitialized()
-    {
-        FetchAsync(0, new() { GuildName = "Resus", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace });
-        FetchAsync(1, new() { GuildName = "Da Bishes", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace });
-        FetchAsync(2, new() { GuildName = "Vortex", RealmName = "Barthilas", Region = Region.US, Zone = Zone.NerubarPalace });
-    }
-
-    private async Task FetchAsync(int index, GuildReportRequest request)
+    async Task<ChartDataResponse?> FetchAsync(GuildReportRequest request)
     {
         try {
-            ChartData? data = null;
-            string? error = null;
-
-            var result = await StatsApi.GetGuildReportChartDataAsync(request);
+            var result = await StatsApiClient.GetGuildReportChartDataAsync(request);
             if (result.Value is not null) {
-                data = result.Value;
+                return result.Value;
             }
 
+            // race condition risks
             if (result.Error != null) {
-                error = $"Error: {result.Error.Title}";
+                Message = $"{Message}<br/>Error: {result.Error.Title}";
             }
+        }
+        catch (Exception ex)
+        {
+            Message = $"{Message}<br/>{ex.Message}";
+        }
 
-            ChartDatas[index] = new(request.GuildName, request.RealmName, error, data);
-        }
-        catch (Exception ex) {
-            ChartDatas[index] = new(request.GuildName, request.RealmName, $"Error: {ex.Message}", null);
-        }
-        finally {
-            int x = Interlocked.Decrement(ref pending);
-            if (x == 0)
-            {
-                Message = string.Empty;
-                StateHasChanged();
-            }
-        }
+        return null;
     }
 }

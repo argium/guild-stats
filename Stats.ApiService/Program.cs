@@ -68,20 +68,13 @@ app.MapPost("/reports/guild", async (GuildReportRequest args, [FromServices] IGu
 				return Results.Stream(async stream => await writer.WriteAsync("RaidVelocity", stream, data, ct), "text/csv");
 
 			case FileType.Chart:
-				var chartData = new ChartData();
-
+				var dataResponse = new List<DataPoint>();
 				await foreach (var row in data)
 				{
-					List<DataPoint> series;
-					if (!chartData.Series.TryGetValue(row.Name, out series))
-					{
-						series = new List<DataPoint>();
-						chartData.Series.Add(row.Name, series);
-					}
-
-					series.Add(new DataPoint(row.Time, new Decimal(row.Percentage)));
+					dataResponse.Add(new DataPoint(row.Name, row.Time, new Decimal(row.Percentage)));
 				}
-				return Results.Ok(chartData);
+
+				return Results.Ok(new ChartDataResponse($"{args.GuildName}-{args.RealmName}", dataResponse));
 
 			default:
 				throw new NotSupportedException();

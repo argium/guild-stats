@@ -1,8 +1,14 @@
 namespace Stats.Domain;
 
-public record ChartData
-{
-	public Dictionary<string, List<DataPoint>> Series { get; init; } = new();
-}
+/// <summary>
+/// Represents a collection of data points for a chart.
+/// </summary>
+public record ChartDataResponse(string GuildAndRealm, List<DataPoint> Series);
 
-public record DataPoint(DateTime Time, decimal Value);
+/// <summary>
+/// Represents a single data point in a chart.
+/// </summary>
+/// <param name="SeriesName">The series name (eg. boss name)</param>
+/// <param name="Time">The time.</param>
+/// <param name="Value">The value (eg. boss percentage)</param>
+public record DataPoint(string SeriesName, DateTime Time, decimal Value);

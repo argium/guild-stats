@@ -12,7 +12,7 @@ public class StatsApiClient(HttpClient httpClient)
 		return await response.Content.ReadAsStreamAsync();
     }
 
-    public async Task<Response<ChartData?>> GetGuildReportChartDataAsync(GuildReportRequest args)
+    public async Task<Response<ChartDataResponse?>> GetGuildReportChartDataAsync(GuildReportRequest args)
     {
 		HttpResponseMessage? response = null;
 		args.FileType = FileType.Chart;
@@ -21,7 +21,7 @@ public class StatsApiClient(HttpClient httpClient)
 			response.EnsureSuccessStatusCode();
 			// return await response.Content.ReadFromJsonAsync<T>();
 
-			return new() { Value = await response.Content.ReadFromJsonAsync<ChartData>() };
+			return new() { Value = await response.Content.ReadFromJsonAsync<ChartDataResponse>() };
 		}
 		catch (HttpRequestException hex) when (response != null)
 		{

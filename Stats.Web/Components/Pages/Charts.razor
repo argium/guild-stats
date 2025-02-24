@@ -78,14 +78,10 @@
     <div>@DisplayMessage</div>
 </EditForm>
 
-
-@foreach (var chart in ChartDatas)
-{
-    <RaidVelocityChart GuildName="@(chart.GuildName)" RealmName="@(chart.RealmName)" Data="@(chart.Data)" />
-}
+<RaidVelocityChart Data=ChartDatas />
 
 @code {
-    List<(string GuildName, string RealmName, ChartData Data)> ChartDatas = new();
+    Dictionary<string, ChartDataResponse> ChartDatas = new();
     string DisplayMessage = string.Empty;
     bool RequestPending;
     bool ChartDisplayed;
@@ -116,7 +112,7 @@
             var result = await StatsApi.GetGuildReportChartDataAsync(Model!);
             if (result.Value is not null) {
 
-                ChartDatas.Add((Model!.GuildName, Model!.RealmName, result.Value));
+                ChartDatas.Add($"{Model!.GuildName}-{Model!.RealmName}", result.Value);
                 DisplayMessage = string.Empty;
                 ChartDisplayed = true;
             }

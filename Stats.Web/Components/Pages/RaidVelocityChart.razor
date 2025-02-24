@@ -1,54 +1,58 @@
 @using Stats.Domain
 
-<ApexChart TItem="DataPoint" Title="@($"{GuildName}-{RealmName}")" Options="@Options">
-
-    @*    <ApexPointSeries TItem="DataPoint"
-                        Items="@(DataPoints)"
-                        Name="@(Model.GuildName)"
-                        SeriesType="SeriesType.Line"
-                        XValue="e => e.Time"
-                        YValue="e=> e.Value"
-                        /> *@
-
-    @foreach (var series in Data.Series)
+<ApexChart TItem="RangeBarData" Title="Raid Velocity" Options=Options XAxisType="XAxisType.Datetime">
+    @foreach (var kvp in Data)
     {
-        <ApexPointSeries
-            TItem="DataPoint"
-            Items="@(series.Value)"
-            Name="@(series.Key)"
-            SeriesType="SeriesType.Area"
-            XValue="e => e.Time"
-            YValue="e=> e.Value"
-        />
+        <ApexRangeSeries
+            TItem="RangeBarData"
+            Name="@(kvp.Key)"
+            Items="@(ToRangeBarData(kvp.Value))"
+            @* TODO: Swap guild name and boss name *@
+            XValue="@(e => e.BossName)"
+            YMinValue="@(e => e.StartDate.ToUnixTimeMilliseconds())"
+            YMaxValue="@(e =>e.EndDate.ToUnixTimeMilliseconds())" />
     }
 </ApexChart>
 
 @code {
     [Parameter, EditorRequired]
-    public required string GuildName { get; set; }
+    public required Dictionary<string, ChartDataResponse> Data { get; set; }
 
-    [Parameter, EditorRequired]
-    public required string RealmName { get; set; }
+    ApexChartOptions<RangeBarData> Options { get; set; } = new();
 
-    [Parameter, EditorRequired]
-    public required ChartData Data { get; set; }
+    // The range bar chart needs a start and end date for each boss, without the percentages (for now).
+    record RangeBarData(string BossName, DateTime StartDate, DateTime EndDate);
 
-    ApexChartOptions<DataPoint> Options { get; set; } = new();
+    private static IEnumerable<RangeBarData> ToRangeBarData(ChartDataResponse data)
+    {
+        return data.Series
+            .GroupBy(e => e.SeriesName)
+            .Select(e => new RangeBarData(e.Key, e.Min(e => e.Time), e.Max(e => e.Time)));
+    }
 
     protected override void OnInitialized()
     {
-        Options.Chart.Width = 900;
-        Options.Chart.Height = 500;
-        Options.Stroke = new Stroke() {
-            Width = 2
-        };
-        Options.Chart.Group = "reports";
-
-        @* var range = DateTime.Now.ToUnixTimeMilliseconds()
-                - DateTime.Parse("2024-10-24").ToUnixTimeMilliseconds(); *@
-
-        Options.Xaxis = new XAxis() {
-            Type = XAxisType.Datetime,
+        Options = new ApexChartOptions<RangeBarData>
+        {
+            Chart = new Chart
+            {
+                Width = 900,
+                Height = 500,
+            },
+            PlotOptions = new PlotOptions
+            {
+                Bar = new PlotOptionsBar
+                {
+                    Horizontal = true
+                }
+            },
+            Tooltip = new ApexCharts.Tooltip
+            {
+                X = new TooltipX
+                {
+                    Format = "dd MMM yyyy HH:mm"
+                }
+            }
         };
     }
 }
