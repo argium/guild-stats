@@ -6,7 +6,7 @@ namespace Stats.TokenProvider;
 public class WarcraftLogsTokenProvider : ITokenProvider
 {
 	private static readonly Uri TokenUri = new("https://www.warcraftlogs.com/oauth/token");
-
+	private readonly ReaderWriterLockSlim _lock = new();
 	private DateTimeOffset _expiry = DateTimeOffset.MinValue;
 	private TokenResponse? _token;
 	private readonly HttpClient _httpClient;
@@ -21,39 +21,69 @@ public class WarcraftLogsTokenProvider : ITokenProvider
 		_log = log;
 	}
 
-	public async Task<string> GetTokenAsync(CancellationToken cancellationToken = default)
+	public Task<string> GetTokenAsync(CancellationToken cancellationToken = default)
 	{
-		var options = _options.CurrentValue;
-
-		if (!string.IsNullOrWhiteSpace(_options.CurrentValue.Token))
+		_lock.EnterUpgradeableReadLock();
+		try
 		{
-			_log.LogDebug("Returning token from settings.");
-			return _options.CurrentValue.Token;
-		}
+			var options = _options.CurrentValue;
 
-		if (_token is null || ShouldRefreshToken(options.BufferWindow))
-		{
-			_log.LogInformation("Refreshing token.");
-
-			_httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.ClientId}:{options.ClientSecret}"))}");
-			var request = new HttpRequestMessage(HttpMethod.Post, TokenUri);
-			request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+			if (!string.IsNullOrWhiteSpace(_options.CurrentValue.Token))
 			{
-				["grant_type"] = "client_credentials"
-			});
-
-			var response = await _httpClient.SendAsync(request, cancellationToken);
-			response.EnsureSuccessStatusCode();
-			_token = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken);
-			if (_token is null)
-			{
-				throw new InvalidOperationException("Failed to deserialise token response.");
+				_log.LogDebug("Returning token from settings.");
+				return Task.FromResult(_options.CurrentValue.Token);
 			}
 
-			_expiry = DateTimeOffset.UtcNow.AddSeconds(_token.expires_in);
+			if (_token is null || ShouldRefreshToken(options.BufferWindow))
+			{
+				_lock.EnterWriteLock();
+				try
+				{
+					if (_token is null || ShouldRefreshToken(options.BufferWindow))
+					{
+						RefreshTokenInternal(cancellationToken).Wait(cancellationToken);
+					}
+				}
+				finally
+				{
+					_lock.ExitWriteLock();
+				}
+			}
+
+			return  Task.FromResult(_token.access_token);
+		}
+		catch (Exception ex)
+		{
+			_log.LogError(ex, "Failed to get token.");
+			throw;
+		}
+		finally
+		{
+			_lock.ExitUpgradeableReadLock();
+		}
+	}
+
+	private async Task RefreshTokenInternal(CancellationToken cancellationToken)
+	{
+		_log.LogInformation("Refreshing token.");
+
+		var options = _options.CurrentValue;
+		_httpClient.DefaultRequestHeaders.Add("Authorization", $"Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.ClientId}:{options.ClientSecret}"))}");
+		var request = new HttpRequestMessage(HttpMethod.Post, TokenUri);
+		request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+		{
+			["grant_type"] = "client_credentials"
+		});
+
+		var response = await _httpClient.SendAsync(request, cancellationToken);
+		response.EnsureSuccessStatusCode();
+		_token = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken);
+		if (_token is null)
+		{
+			throw new InvalidOperationException("Failed to deserialise token response.");
 		}
 
-		return _token.access_token;
+		_expiry = DateTimeOffset.UtcNow.AddSeconds(_token.expires_in);
 	}
 
 	private bool ShouldRefreshToken(TimeSpan buffer) => DateTimeOffset.UtcNow >= _expiry - buffer;

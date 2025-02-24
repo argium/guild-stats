@@ -12,12 +12,13 @@
 
     @foreach (var series in Data.Series)
     {
-        <ApexPointSeries TItem="DataPoint"
-        Items="@(series.Value)"
-        Name="@(series.Key)"
-        SeriesType="SeriesType.Line"
-        XValue="e => e.Time"
-        YValue="e=> e.Value"
+        <ApexPointSeries
+            TItem="DataPoint"
+            Items="@(series.Value)"
+            Name="@(series.Key)"
+            SeriesType="SeriesType.Area"
+            XValue="e => e.Time"
+            YValue="e=> e.Value"
         />
     }
 </ApexChart>
