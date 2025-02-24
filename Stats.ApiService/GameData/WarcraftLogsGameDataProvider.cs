@@ -12,6 +12,12 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 	private readonly ILogger<WarcraftLogsGameDataProvider> _log;
 	private readonly HybridCache _cache;
 
+	private static readonly Lazy<WorldDataMessage> WorldData = new(() =>
+	{
+		var json = File.ReadAllText("GameData/Zones.json");
+		return JsonSerializer.Deserialize<WorldDataMessage>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new InvalidOperationException("Failed to deserialize WorldDataMessage");
+	});
+
 	public WarcraftLogsGameDataProvider(IGraphQLWebSocketClient graphQLClient, HybridCache cache, ILogger<WarcraftLogsGameDataProvider> log)
 	{
 		_graphQLClient = graphQLClient;
@@ -99,9 +105,14 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		return response.Data;
 	}
 
-	public Task SaveReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, Zone zone, IEnumerable<Report> reports, CancellationToken cancellationToken = default)
+	public Task<List<Encounter>> GetEncountersAsync(Zone zone, CancellationToken cancellationToken = default)
 	{
-		throw new NotImplementedException();
+		var zoneData = WorldData!.Value.Data.Expansions.SelectMany(e => e.Zones).FirstOrDefault(z => z.Id == (int)zone);
+		if (zoneData == null)
+		{
+			throw new GameDataProviderException($"Encounters in zone ID {zone} not found.");
+		}
+		return Task.FromResult(zoneData.Encounters);
 	}
 
 	private void CheckRateLimit(RateLimitData rateLimitData)
@@ -113,6 +124,20 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 			this._log.LogWarning("Rate limit warning: less than 300 points remaining this hour");
 		}
 	}
+
+	private const string GetZonesQuery = """
+query {
+	worldData {
+		expansions {
+			zones {
+				id
+				name
+				encounters { id name }
+			}
+		}
+	}
+}
+""";
 
 	private const string GetReportsQuery = """
 query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!, $zoneID: Int!) {
@@ -187,5 +212,6 @@ query ($code: String!) {
     }
 }
 """;
+
 
 }

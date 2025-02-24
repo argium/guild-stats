@@ -29,6 +29,8 @@ public class GuildReportProducer : IGuildReportProducer
 		var reports = new List<Report>();
 		int i = 0;
 
+		var encounters = await _gameDataProvider.GetEncountersAsync(zone, cancellationToken);
+
 		await foreach (var report in _gameDataProvider.GetAllFightReportsAsync(guildName, realmName, region, zone, cancellationToken))
 		{
 			rawReports.Add(report);

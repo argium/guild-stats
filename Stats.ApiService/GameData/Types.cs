@@ -7,7 +7,10 @@ public record RateLimitData(
 	int PointsResetIn
 );
 
-// Guild data
+
+//
+// GUILD DATA
+//
 public record GuildData(
 	Guild Guild
 );
@@ -17,8 +20,9 @@ public record Guild(
 	string Name
 );
 
-
-// Report list
+//
+// LOGS AND REPORTS
+//
 public record ReportsListMessage(
 	RateLimitData RateLimitData,
 	ReportDataPage ReportData
@@ -92,8 +96,19 @@ public record GameZone(
 public enum Difficulty
 {
 	Normal = 3,
-
 	Heroic = 4,
-
 	Mythic = 5
 }
+
+//
+// WORLD DATA
+// 
+public record WorldDataMessage(WorldData Data);
+
+public record WorldData(List<Expansion> Expansions);
+
+public record Expansion(List<WCLZone> Zones);
+
+public record WCLZone(int Id, string Name, List<Encounter> Encounters);
+
+public record Encounter(int Id, string Name);
