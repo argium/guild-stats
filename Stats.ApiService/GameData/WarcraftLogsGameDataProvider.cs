@@ -12,10 +12,10 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 	private readonly ILogger<WarcraftLogsGameDataProvider> _log;
 	private readonly HybridCache _cache;
 
-	private static readonly Lazy<WorldDataMessage> WorldData = new(() =>
+	private static readonly Lazy<WorldData> WorldData = new(() =>
 	{
 		var json = File.ReadAllText("GameData/Zones.json");
-		return JsonSerializer.Deserialize<WorldDataMessage>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? throw new InvalidOperationException("Failed to deserialize WorldDataMessage");
+		return JsonSerializer.Deserialize<DataMessage<WorldDataMessage>>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web))?.Data?.WorldData ?? throw new InvalidOperationException("Failed to deserialize WorldDataMessage");
 	});
 
 	public WarcraftLogsGameDataProvider(IGraphQLWebSocketClient graphQLClient, HybridCache cache, ILogger<WarcraftLogsGameDataProvider> log)
@@ -63,7 +63,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 					var reportsDataResp = await this.ExecuteAsync<ReportsDataMessage>(reportsData, cancellationToken);
 					this.CheckRateLimit(reportsDataResp.RateLimitData);
 					return reportsDataResp.ReportData.Report;
-				}, 
+				},
 				options: new() { Expiration = TimeSpan.FromHours(24) },
 				cancellationToken: cancellationToken);
 
@@ -107,7 +107,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 
 	public Task<List<Encounter>> GetEncountersAsync(Zone zone, CancellationToken cancellationToken = default)
 	{
-		var zoneData = WorldData!.Value.Data.Expansions.SelectMany(e => e.Zones).FirstOrDefault(z => z.Id == (int)zone);
+		var zoneData = WorldData!.Value.Expansions.SelectMany(e => e.Zones).FirstOrDefault(z => z.Id == (int)zone);
 		if (zoneData == null)
 		{
 			throw new GameDataProviderException($"Encounters in zone ID {zone} not found.");

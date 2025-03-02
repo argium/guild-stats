@@ -1,6 +1,10 @@
 namespace Stats.GameData;
 
+//
 // Metadata
+//
+public record DataMessage<T>(T Data);
+
 public record RateLimitData(
 	int LimitPerHour,
 	double PointsSpentThisHour,
@@ -102,8 +106,8 @@ public enum Difficulty
 
 //
 // WORLD DATA
-// 
-public record WorldDataMessage(WorldData Data);
+//
+public record WorldDataMessage(WorldData WorldData);
 
 public record WorldData(List<Expansion> Expansions);
 
