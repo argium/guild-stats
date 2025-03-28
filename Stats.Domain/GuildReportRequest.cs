@@ -12,6 +12,8 @@ public record GuildReportRequest
 	[Length(5, 20)]
 	public string RealmName { get; set; } = string.Empty;
 
+	public string? GuildTag { get; set; }
+
 	public Region Region { get; set; }
 	public Zone Zone { get; set; }
 	public FileType FileType { get; set; }

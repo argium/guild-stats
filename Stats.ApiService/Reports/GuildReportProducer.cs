@@ -22,6 +22,7 @@ public class GuildReportProducer : IGuildReportProducer
 		string guildName,
 		string realmName,
 		string region,
+		string? guildTag,
 		Zone zone,
 		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
@@ -31,7 +32,7 @@ public class GuildReportProducer : IGuildReportProducer
 
 		var encounters = await _gameDataProvider.GetEncountersAsync(zone, cancellationToken);
 
-		await foreach (var report in _gameDataProvider.GetAllFightReportsAsync(guildName, realmName, region, zone, cancellationToken))
+		await foreach (var report in _gameDataProvider.GetAllFightReportsAsync(guildName, realmName, region, guildTag, zone, cancellationToken))
 		{
 			rawReports.Add(report);
 

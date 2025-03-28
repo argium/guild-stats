@@ -12,12 +12,21 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 	private readonly ILogger<WarcraftLogsGameDataProvider> _log;
 	private readonly HybridCache _cache;
 
+	/// <summary>
+	/// Lazy loaded world data. This should not change within the same game version.
+	/// </summary>
 	private static readonly Lazy<WorldData> WorldData = new(() =>
 	{
 		var json = File.ReadAllText("GameData/Zones.json");
 		return JsonSerializer.Deserialize<DataMessage<WorldDataMessage>>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web))?.Data?.WorldData ?? throw new InvalidOperationException("Failed to deserialize WorldDataMessage");
 	});
 
+	/// <summary>
+	/// Initializes a new instance of the <see cref="WarcraftLogsGameDataProvider"/> class.
+	/// </summary>
+	/// <param name="graphQLClient"></param>
+	/// <param name="cache"></param>
+	/// <param name="log"></param>
 	public WarcraftLogsGameDataProvider(IGraphQLWebSocketClient graphQLClient, HybridCache cache, ILogger<WarcraftLogsGameDataProvider> log)
 	{
 		_graphQLClient = graphQLClient;
@@ -25,32 +34,23 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		_cache = cache;
 	}
 
-	public async IAsyncEnumerable<Report> GetAllFightReportsAsync(string guildName, string guildServerSlug, string guildServerRegion, Zone zone, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	/// <inheritdoc/>
+	public async IAsyncEnumerable<Report> GetAllFightReportsAsync(
+		string guildName,
+		string guildServerSlug,
+		string guildServerRegion,
+		string? guildTag,
+		Zone zone,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var reportsList = new GraphQLRequest
-		{
-			Query = GetReportsQuery,
-			Variables = new
-			{
-				guildName = guildName,
-				guildServerSlug = guildServerSlug,
-				guildServerRegion = guildServerRegion,
-				zoneID = (int)zone,
-			}
-		};
-
-		var resp = await this.ExecuteAsync<ReportsListMessage>(reportsList, cancellationToken);
-		this.CheckRateLimit(resp.RateLimitData);
-		var reportCodes = resp.ReportData.Reports.Data.Select(r => r.Code);
-
-		foreach (var code in reportCodes)
+		await foreach (var code in GetGuildReportCodesAsync(guildName, guildServerSlug, guildServerRegion, guildTag, zone, cancellationToken))
 		{
 			var reportsData = new GraphQLRequest
 			{
 				Query = GetFightDetailsQuery,
 				Variables = new
 				{
-					code = code
+					code
 				}
 			};
 
@@ -71,6 +71,98 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		}
 	}
 
+	/// <summary>
+	/// Get all report codes for a guild and/or guild tag.
+	/// </summary>
+	/// <param name="guildName"></param>
+	/// <param name="guildServerSlug"></param>
+	/// <param name="guildServerRegion"></param>
+	/// <param name="guildTag">The guild tag (eg. "T1"). This takes precedence over all other guild arguments.</param>
+	/// <param name="zone"></param>
+	/// <param name="cancellationToken"></param>
+	/// <returns></returns>
+	/// <exception cref="GameDataProviderException"></exception>
+	private async IAsyncEnumerable<string> GetGuildReportCodesAsync(
+		string guildName,
+		string guildServerSlug,
+		string guildServerRegion,
+		string? guildTag,
+		Zone zone,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		IEnumerable<string> reportCodes = Enumerable.Empty<string>();
+		if (guildTag != null)
+		{
+			var guild = await this.ExecuteAsync<DataMessage<GuildDataMessage>>(new GraphQLRequest  // TODO: the DataMessage wrapper is not deserializing correctly.
+			{
+				Query = GetGuildQuery,
+				Variables = new
+				{
+					guildName,
+					guildServerSlug,
+					guildServerRegion,
+					guildTag,
+				}
+			}, cancellationToken);
+
+			this.CheckRateLimit(guild.Data.RateLimitData);
+			var guildTagData = guild.Data.GuildData.Guild.Tags.Where(t => t.Name == guildTag).FirstOrDefault();
+			if (guildTagData == null)
+			{
+				throw new GameDataProviderException($"Guild tag {guildTag} not found.");
+			}
+
+			var reportsList = new GraphQLRequest
+			{
+				Query = GetReportsByGuildTagQuery,
+				Variables = new
+				{
+					// the other arguments are still required, but they should be ignored by the API when tag is present
+					guildName,
+					guildServerSlug,
+					guildServerRegion,
+					guildTag = guildTagData.Name,
+					zoneID = (int)zone,
+				}
+			};
+
+			var resp = await this.ExecuteAsync<ReportsListMessage>(reportsList, cancellationToken);
+			this.CheckRateLimit(resp.RateLimitData);
+			reportCodes = resp.ReportData.Reports.Data.Select(r => r.Code);
+		}
+		else
+		{
+			// If no guild tag is provided, we can just use the guild name and server slug. This will get all reports for the guild.
+			var reportsList = new GraphQLRequest
+			{
+				Query = GetReportsQuery,
+				Variables = new
+				{
+					guildName,
+					guildServerSlug,
+					guildServerRegion,
+					zoneID = (int)zone,
+				}
+			};
+			var resp = await this.ExecuteAsync<ReportsListMessage>(reportsList, cancellationToken);
+			this.CheckRateLimit(resp.RateLimitData);
+			reportCodes = resp.ReportData.Reports.Data.Select(r => r.Code);
+		}
+
+		foreach (var code in reportCodes)
+		{
+			yield return code;
+		}
+	}
+
+	/// <summary>
+	/// Executes a GraphQL request and returns the response.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="request"></param>
+	/// <param name="cancellationToken"></param>
+	/// <returns></returns>
+	/// <exception cref="GameDataProviderException"></exception>
 	private async Task<T> ExecuteAsync<T>(GraphQLRequest request, CancellationToken cancellationToken)
 	{
 		GraphQLResponse<T>? response;
@@ -79,7 +171,7 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		}
 		catch (Exception ex)
 		{
-			throw new GameDataProviderException("An error occurred while fetching data", ex);
+			throw new GameDataProviderException($"An error occurred while fetching data: {ex.Message}", ex);
 		}
 
 		if (response == null)
@@ -105,6 +197,13 @@ public class WarcraftLogsGameDataProvider : IGameDataProvider
 		return response.Data;
 	}
 
+	/// <summary>
+	/// Get all encounters in a zone.
+	/// </summary>
+	/// <param name="zone"></param>
+	/// <param name="cancellationToken"></param>
+	/// <returns></returns>
+	/// <exception cref="GameDataProviderException"></exception>
 	public Task<List<Encounter>> GetEncountersAsync(Zone zone, CancellationToken cancellationToken = default)
 	{
 		var zoneData = WorldData!.Value.Expansions.SelectMany(e => e.Zones).FirstOrDefault(z => z.Id == (int)zone);
@@ -139,8 +238,10 @@ query {
 }
 """;
 
-	private const string GetReportsQuery = """
-query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!, $zoneID: Int!) {
+
+	private const string GetGuildQuery =
+"""
+query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!) {
     rateLimitData {
         limitPerHour
         pointsSpentThisHour
@@ -150,10 +251,49 @@ query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: Strin
         guild(name: $guildName, serverSlug: $guildServerSlug, serverRegion: $guildServerRegion) {
             name
             id
+			tags {
+				id
+				name
+			}
         }
+    }
+}
+""";
+
+	private const string GetReportsQuery = """
+query ($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!, $zoneID: Int!) {
+    rateLimitData {
+        limitPerHour
+        pointsSpentThisHour
+        pointsResetIn
     }
     reportData {
         reports(guildName: $guildName, guildServerSlug: $guildServerSlug, guildServerRegion: $guildServerRegion, zoneID: $zoneID) {
+            total
+            per_page
+            current_page
+            from
+            to
+            last_page
+            has_more_pages
+            data {
+                code
+                endTime
+            }
+        }
+    }
+}
+""";
+
+	private const string GetReportsByGuildTagQuery = """
+query ($guildTag: String!, $zoneID: Int!) {
+    rateLimitData {
+        limitPerHour
+        pointsSpentThisHour
+        pointsResetIn
+    }
+    reportData {
+        reports(guildTag: $guildTag, zoneID: $zoneID) {
             total
             per_page
             current_page

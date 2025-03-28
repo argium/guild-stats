@@ -61,7 +61,7 @@ app.MapPost("/reports/guild", async (GuildReportRequest args, [FromServices] IGu
 {
 	try
 	{
-		IAsyncEnumerable<RaidVelocityReportRow> data = report.GetRaidVelocityReportDataAsync(args.GuildName, args.RealmName, args.Region.ToString(), args.Zone, ct);
+		IAsyncEnumerable<RaidVelocityReportRow> data = report.GetRaidVelocityReportDataAsync(args.GuildName, args.RealmName, args.Region.ToString(), args.GuildTag, args.Zone, ct);
 		switch (args.FileType)
 		{
 			case FileType.CSV:

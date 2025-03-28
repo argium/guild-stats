@@ -6,6 +6,7 @@ public interface IGuildReportProducer
 		string guildName,
 		string realmName,
 		string region,
+		string? guildTag,
 		Zone zone,
 		CancellationToken cancellationToken = default);
 }

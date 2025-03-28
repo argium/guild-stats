@@ -29,9 +29,9 @@
     {
         var guilds = new List<GuildReportRequest>
         {
-            new() { GuildName = "Resus", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace },
-            new() { GuildName = "Da Bishes", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace },
-            new() { GuildName = "Vortex", RealmName = "Barthilas", Region = Region.US, Zone = Zone.NerubarPalace },
+            new() { GuildName = "Resus", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.LiberationOfUndermine },
+            @* new() { GuildName = "Da Bishes", RealmName = "Frostmourne", Region = Region.US, Zone = Zone.NerubarPalace },
+            new() { GuildName = "Vortex", RealmName = "Barthilas", Region = Region.US, Zone = Zone.NerubarPalace }, *@
         };
 
         var tasks = guilds.Select(FetchAsync);

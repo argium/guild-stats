@@ -15,12 +15,24 @@ public record RateLimitData(
 //
 // GUILD DATA
 //
+
+public record GuildDataMessage(
+	RateLimitData RateLimitData,
+	GuildData GuildData
+);
+
 public record GuildData(
 	Guild Guild
 );
 
 public record Guild(
 	string Id,
+	string Name,
+	List<GuildTag> Tags
+);
+
+public record GuildTag(
+	int Id,
 	string Name
 );
 

@@ -1,4 +1,4 @@
-@page "/charts"
+﻿@page "/charts"
 @using Stats.Domain
 @* @attribute [StreamRendering(true)] *@
 @* @rendermode InteractiveServer *@
@@ -54,6 +54,13 @@
         <ValidationMessage For="@(() => Model.GuildName)" />
     </div>
     <div>
+        <label>
+            Guild Tag:
+            <InputText @bind-Value="Model!.GuildTag" />
+        </label>
+        <ValidationMessage For="@(() => Model.GuildTag)" />
+    </div>
+    <div>
         Raid instance:
         <InputSelect @bind-Value="Model!.Zone" disabled="@(ChartDisplayed)">
             <option value="">
@@ -94,6 +101,7 @@
         Model ??= new() {
                 GuildName = "Resus",
                 RealmName = "Frostmourne",
+                GuildTag = "T1",
                 Region = Region.US,
                 Zone = Zone.NerubarPalace,
             };

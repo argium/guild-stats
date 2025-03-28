@@ -7,7 +7,6 @@
             TItem="RangeBarData"
             Name="@(kvp.Key)"
             Items="@(ToRangeBarData(kvp.Value))"
-            @* TODO: Swap guild name and boss name *@
             XValue="@(e => e.BossName)"
             YMinValue="@(e => e.StartDate.ToUnixTimeMilliseconds())"
             YMaxValue="@(e =>e.EndDate.ToUnixTimeMilliseconds())" />
